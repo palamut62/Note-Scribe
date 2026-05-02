@@ -1,3 +1,5 @@
+const PROXY_BASE = '/api/ai-proxy';
+
 export async function fixText(
   text: string,
   provider: 'openrouter' | 'nvidia',
@@ -7,30 +9,25 @@ export async function fixText(
   if (!apiKey) throw new Error('API anahtarı gerekli');
   if (!model) throw new Error('Model seçimi gerekli');
 
-  const prompt = "Lütfen aşağıdaki metni düzelt, yazım ve dilbilgisi hatalarını gider, ancak anlamı ve tonu koru:\n\n" + text;
+  const prompt =
+    'Lütfen aşağıdaki metni düzelt, yazım ve dilbilgisi hatalarını gider, ancak anlamı ve tonu koru:\n\n' +
+    text;
 
-  const url = provider === 'openrouter'
-    ? 'https://openrouter.ai/api/v1/chat/completions'
-    : 'https://integrate.api.nvidia.com/v1/chat/completions';
-
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-  };
-  if (provider === 'openrouter') {
-    headers['HTTP-Referer'] = window.location.origin;
-    headers['X-Title'] = 'Notlar';
-  }
-
-  const response = await fetch(url, {
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',
-    headers,
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] }),
   });
 
   if (!response.ok) {
     let detail = response.statusText;
-    try { const j = await response.json(); detail = j.error?.message || j.message || detail; } catch {}
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
@@ -44,23 +41,17 @@ export async function fetchModels(
 ): Promise<{ id: string; name: string }[]> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
 
-  const url = provider === 'openrouter'
-    ? 'https://openrouter.ai/api/v1/models'
-    : 'https://integrate.api.nvidia.com/v1/models';
-
-  const headers: Record<string, string> = {
-    'Authorization': `Bearer ${apiKey}`,
-  };
-  if (provider === 'openrouter') {
-    headers['HTTP-Referer'] = window.location.origin;
-    headers['X-Title'] = 'Notlar';
-  }
-
-  const response = await fetch(url, { method: 'GET', headers });
+  const response = await fetch(`${PROXY_BASE}/models?provider=${provider}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
 
   if (!response.ok) {
     let detail = response.statusText;
-    try { const j = await response.json(); detail = j.error?.message || j.message || detail; } catch {}
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
     throw new Error(`Model listesi alınamadı (${response.status}): ${detail}`);
   }
 
