@@ -35,6 +35,41 @@ export async function fixText(
   return data.choices?.[0]?.message?.content || text;
 }
 
+export async function translateToTurkish(
+  text: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string
+): Promise<string> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  if (!model) throw new Error('Model seçimi gerekli');
+
+  const prompt =
+    'Aşağıdaki metni Türkçeye çevir. Yalnızca çevrilmiş metni döndür, açıklama veya ek bilgi ekleme. Metnin biçimlendirmesini (paragraflar, satır sonları vb.) koru:\n\n' +
+    text;
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
+    throw new Error(`API Hatası (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || text;
+}
+
 export async function fixWord(
   word: string,
   provider: 'openrouter' | 'nvidia',

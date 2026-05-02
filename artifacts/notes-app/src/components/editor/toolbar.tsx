@@ -5,12 +5,12 @@ import {
   List, ListOrdered, CheckSquare,
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
-  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown,
+  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
-import { fixText } from '@/lib/ai';
+import { fixText, translateToTurkish } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
 import { Note, HeaderFooter, HFZone } from '@/lib/types';
@@ -94,6 +94,7 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
   const { settings, updateNote, updateSettings } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
@@ -185,6 +186,35 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
       toast({ title: 'Hata', description: err.message || 'Metin düzeltilemedi', variant: 'destructive' });
     } finally {
       setIsFixing(false);
+    }
+  };
+
+  const handleTranslate = async () => {
+    const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
+    if (!apiKey || !model) {
+      toast({ title: 'AI Yapılandırılmadı', description: 'Ayarlar\'dan API anahtarı ve model seçin.', variant: 'destructive' });
+      return;
+    }
+    const selection = editor.state.selection;
+    const isTextSelected = !selection.empty;
+    const textToTranslate = isTextSelected
+      ? editor.state.doc.textBetween(selection.from, selection.to, '\n')
+      : editor.getText('\n');
+    if (!textToTranslate.trim()) return;
+    setIsTranslating(true);
+    try {
+      const translated = await translateToTurkish(textToTranslate, settings.provider, apiKey, model);
+      if (isTextSelected) {
+        editor.commands.insertContentAt({ from: selection.from, to: selection.to }, translated);
+      } else {
+        editor.commands.setContent(translated);
+      }
+      toast({ title: 'Çevrildi', description: 'AI metni Türkçeye çevirdi.' });
+    } catch (err: any) {
+      toast({ title: 'Hata', description: err.message || 'Çeviri yapılamadı', variant: 'destructive' });
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -471,9 +501,21 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
         <Button
           variant="ghost"
           size="sm"
+          className={`h-7 text-xs gap-1 px-2 ${isTranslating ? 'opacity-70' : 'text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40'}`}
+          onClick={handleTranslate}
+          disabled={isTranslating || isFixing}
+          title="AI ile Türkçeye çevir — seçili metni veya tüm sayfayı çevirir"
+        >
+          <Languages className={`h-3.5 w-3.5 ${isTranslating ? 'animate-pulse' : ''}`} />
+          {isTranslating ? 'Çevriliyor...' : 'Çevir'}
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
           className={`h-7 text-xs gap-1 px-2 ${isFixing ? 'opacity-70' : 'text-primary hover:bg-primary/10'}`}
           onClick={handleFixText}
-          disabled={isFixing}
+          disabled={isFixing || isTranslating}
           title="AI ile düzelt"
         >
           <Wand2 className={`h-3.5 w-3.5 ${isFixing ? 'animate-pulse' : ''}`} />
