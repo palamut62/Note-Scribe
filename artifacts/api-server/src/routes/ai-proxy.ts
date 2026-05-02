@@ -13,61 +13,78 @@ const PROVIDER_URLS: Record<string, { models: string; chat: string }> = {
   },
 };
 
+/** Fetch with an explicit timeout (ms). Throws on timeout or network error. */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 router.get("/ai-proxy/models", async (req, res) => {
   const provider = String(req.query["provider"] || "");
   const urls = PROVIDER_URLS[provider];
-  if (!urls) {
-    res.status(400).json({ error: "Geçersiz sağlayıcı" });
-    return;
-  }
+  if (!urls) { res.status(400).json({ error: "Invalid provider" }); return; }
 
   const authHeader = req.headers["authorization"];
-  if (!authHeader) {
-    res.status(401).json({ error: "Authorization header eksik" });
-    return;
-  }
+  if (!authHeader) { res.status(401).json({ error: "Authorization header missing" }); return; }
 
   try {
-    const upstream = await fetch(urls.models, {
-      method: "GET",
-      headers: { Authorization: authHeader },
-    });
-    const data = await upstream.json();
+    const upstream = await fetchWithTimeout(
+      urls.models,
+      { method: "GET", headers: { Authorization: authHeader } },
+      30_000
+    );
+    const text = await upstream.text();
+    let data: unknown;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
     res.status(upstream.status).json(data);
-  } catch (err) {
+  } catch (err: any) {
     req.log.error({ err }, "ai-proxy models fetch failed");
-    res.status(502).json({ error: "Upstream bağlantı hatası" });
+    res.status(502).json({ error: "Upstream connection error", detail: err?.message });
   }
 });
 
 router.post("/ai-proxy/chat", async (req, res) => {
   const provider = String(req.query["provider"] || "");
   const urls = PROVIDER_URLS[provider];
-  if (!urls) {
-    res.status(400).json({ error: "Geçersiz sağlayıcı" });
-    return;
-  }
+  if (!urls) { res.status(400).json({ error: "Invalid provider" }); return; }
 
   const authHeader = req.headers["authorization"];
-  if (!authHeader) {
-    res.status(401).json({ error: "Authorization header eksik" });
-    return;
-  }
+  if (!authHeader) { res.status(401).json({ error: "Authorization header missing" }); return; }
 
   try {
-    const upstream = await fetch(urls.chat, {
-      method: "POST",
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/json",
+    // Vision inference can be slow — allow up to 120 s
+    const upstream = await fetchWithTimeout(
+      urls.chat,
+      {
+        method: "POST",
+        headers: { Authorization: authHeader, "Content-Type": "application/json" },
+        body: JSON.stringify(req.body),
       },
-      body: JSON.stringify(req.body),
-    });
-    const data = await upstream.json();
+      120_000
+    );
+
+    const text = await upstream.text();
+    req.log.info({ status: upstream.status, bodyLen: text.length }, "ai-proxy chat response");
+
+    let data: unknown;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
     res.status(upstream.status).json(data);
-  } catch (err) {
+  } catch (err: any) {
     req.log.error({ err }, "ai-proxy chat fetch failed");
-    res.status(502).json({ error: "Upstream bağlantı hatası" });
+    const isTimeout = err?.name === "AbortError";
+    res.status(502).json({
+      error: isTimeout ? "Upstream timed out (>120 s)" : "Upstream connection error",
+      detail: err?.message,
+    });
   }
 });
 

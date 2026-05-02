@@ -1,7 +1,7 @@
 const PROXY_BASE = '/api/ai-proxy';
 
-// Best NVIDIA NIM vision model for OCR
-const OCR_MODEL = 'nvidia/llama-3.2-11b-vision-instruct';
+// Best NVIDIA NIM vision model for OCR (prefix is meta/, not nvidia/)
+const OCR_MODEL = 'meta/llama-3.2-11b-vision-instruct';
 
 /** Resize + compress image to JPEG ≤ 1024 px on longest side, quality 0.82.
  *  NVIDIA NIM has a ~180 KB base64 payload limit per image. */
