@@ -1,26 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
+import { Highlight } from '@tiptap/extension-highlight';
 import TextAlign from '@tiptap/extension-text-align';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
+import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import { Image } from '@tiptap/extension-image';
+import { Link } from '@tiptap/extension-link';
 import { Note, TextBox } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
+import { FindReplace } from './find-replace';
 
 interface Props {
   note: Note;
 }
 
+function countWords(text: string): number {
+  return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+}
+
 export function NoteEditor({ note }: Props) {
   const { updateNote, settings } = useApp();
   const [activeTextboxId, setActiveTextboxId] = useState<string | null>(null);
+  const [showFindReplace, setShowFindReplace] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
+  const [charCount, setCharCount] = useState(0);
 
   const editor = useEditor({
     extensions: [
@@ -28,11 +40,18 @@ export function NoteEditor({ note }: Props) {
       Underline,
       TextStyle,
       Color,
+      Highlight.configure({ multicolor: true }),
       FontFamily,
       FontSize,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      Image.configure({ inline: false, allowBase64: true }),
+      Link.configure({ openOnClick: false, autolink: true }),
     ],
     content: note.content,
     editorProps: {
@@ -40,6 +59,9 @@ export function NoteEditor({ note }: Props) {
     },
     onUpdate: ({ editor }) => {
       updateNote(note.id, { content: editor.getHTML() });
+      const text = editor.getText();
+      setWordCount(countWords(text));
+      setCharCount(text.length);
     },
   });
 
@@ -49,6 +71,9 @@ export function NoteEditor({ note }: Props) {
       if (!isSameNote) {
         editor.commands.setContent(note.content || '');
         editor.storage.currentNoteId = note.id;
+        const text = editor.getText();
+        setWordCount(countWords(text));
+        setCharCount(text.length);
         setTimeout(() => editor.commands.focus(), 10);
       }
     }
@@ -57,8 +82,22 @@ export function NoteEditor({ note }: Props) {
   useEffect(() => {
     if (editor && !editor.storage.currentNoteId) {
       editor.storage.currentNoteId = note.id;
+      const text = editor.getText();
+      setWordCount(countWords(text));
+      setCharCount(text.length);
     }
   }, [editor]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowFindReplace(v => !v);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const handleAddTextbox = () => {
     const newTb: TextBox = {
@@ -86,9 +125,7 @@ export function NoteEditor({ note }: Props) {
   };
 
   const deleteTextbox = (tbId: string) => {
-    updateNote(note.id, {
-      textboxes: note.textboxes.filter(tb => tb.id !== tbId),
-    });
+    updateNote(note.id, { textboxes: note.textboxes.filter(tb => tb.id !== tbId) });
   };
 
   const bgClass =
@@ -100,12 +137,17 @@ export function NoteEditor({ note }: Props) {
 
   return (
     <div className="editor-shell">
-      <EditorToolbar editor={editor} onAddTextbox={handleAddTextbox} />
+      <EditorToolbar
+        editor={editor}
+        onAddTextbox={handleAddTextbox}
+        onToggleFindReplace={() => setShowFindReplace(v => !v)}
+      />
 
-      <div
-        className="editor-scroll"
-        onClick={() => setActiveTextboxId(null)}
-      >
+      {showFindReplace && (
+        <FindReplace editor={editor} onClose={() => setShowFindReplace(false)} />
+      )}
+
+      <div className="editor-scroll" onClick={() => setActiveTextboxId(null)}>
         <div className={`editor-page ${bgClass}`}>
           {note.textboxes.map(tb => (
             <FloatingTextbox
@@ -117,11 +159,16 @@ export function NoteEditor({ note }: Props) {
               onFocus={() => setActiveTextboxId(tb.id)}
             />
           ))}
-
           <div className="editor-content-area">
             <EditorContent editor={editor} />
           </div>
         </div>
+      </div>
+
+      <div className="editor-statusbar">
+        <span>{wordCount} kelime</span>
+        <span className="mx-2 opacity-40">·</span>
+        <span>{charCount} karakter</span>
       </div>
     </div>
   );
