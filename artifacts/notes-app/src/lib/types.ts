@@ -74,6 +74,15 @@ export type AppTheme =
 
 export type Language = 'tr' | 'en';
 
+export type PinnableActionId =
+  | 'open-file'
+  | 'save-txt'
+  | 'save-md'
+  | 'save-docx'
+  | 'share'
+  | 'print-preview'
+  | 'print-pdf';
+
 export interface Settings {
   provider: 'openrouter' | 'nvidia';
   openrouterApiKey: string;
@@ -88,4 +97,5 @@ export interface Settings {
   marginRight: number;
   autoCorrect: boolean;
   language: Language;
+  pinnedActions: PinnableActionId[];
 }

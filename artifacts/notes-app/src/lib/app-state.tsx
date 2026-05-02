@@ -28,6 +28,7 @@ const defaultSettings: Settings = {
   marginRight: 80,
   autoCorrect: false,
   language: 'tr',
+  pinnedActions: [],
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

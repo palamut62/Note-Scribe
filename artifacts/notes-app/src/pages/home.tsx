@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
+import { PinnableActionId } from '@/lib/types';
 import { TabBar } from '@/components/tab-bar';
 import { NoteEditor } from '@/components/editor/note-editor';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -18,13 +19,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Download, FileText, Printer, FolderOpen, Eye,
-  FileDown, Link, Filter, MoreHorizontal, Check,
+  FileDown, Link, Filter, MoreHorizontal, Check, Pin, PinOff,
 } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
 import mammoth from 'mammoth';
 
 export function Home() {
-  const { notes, activeNoteId, createNote, updateNote, settings } = useApp();
+  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings } = useApp();
   const t = useT();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,6 +33,15 @@ export function Home() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const clipboardHistory = useClipboardHistory();
+
+  const pinnedActions: PinnableActionId[] = settings.pinnedActions ?? [];
+
+  const togglePin = (id: PinnableActionId) => {
+    const next = pinnedActions.includes(id)
+      ? pinnedActions.filter(a => a !== id)
+      : [...pinnedActions, id];
+    updateSettings({ pinnedActions: next });
+  };
 
   const allTags = Array.from(new Set(notes.flatMap(n => n.tags ?? [])));
   const visibleNotes = filterTag ? notes.filter(n => (n.tags ?? []).includes(filterTag)) : notes;
@@ -96,6 +106,79 @@ export function Home() {
     setTimeout(() => setShareCopied(false), 2000);
   };
 
+  type ActionDef = {
+    id: PinnableActionId;
+    Icon: React.ElementType;
+    label: string;
+    ext?: string;
+    requiresNote: boolean;
+    handler: () => void;
+  };
+
+  const actionDefs: ActionDef[] = [
+    {
+      id: 'open-file',
+      Icon: FolderOpen,
+      label: t('menu.open.file'),
+      ext: '.txt .md .docx',
+      requiresNote: false,
+      handler: () => fileInputRef.current?.click(),
+    },
+    {
+      id: 'save-txt',
+      Icon: FileText,
+      label: t('menu.save.txt'),
+      ext: '.txt',
+      requiresNote: true,
+      handler: handleSaveTxt,
+    },
+    {
+      id: 'save-md',
+      Icon: Download,
+      label: t('menu.save.md'),
+      ext: '.md',
+      requiresNote: true,
+      handler: handleSaveMd,
+    },
+    {
+      id: 'save-docx',
+      Icon: FileDown,
+      label: t('menu.save.docx'),
+      ext: '.docx',
+      requiresNote: true,
+      handler: handleSaveDocx,
+    },
+    {
+      id: 'share',
+      Icon: shareCopied ? Check : Link,
+      label: shareCopied ? t('menu.link.copied') : t('menu.copy.link'),
+      requiresNote: true,
+      handler: handleShare,
+    },
+    {
+      id: 'print-preview',
+      Icon: Eye,
+      label: t('menu.print.preview'),
+      requiresNote: true,
+      handler: () => setShowPrintPreview(true),
+    },
+    {
+      id: 'print-pdf',
+      Icon: Printer,
+      label: t('menu.print.pdf'),
+      requiresNote: true,
+      handler: () => window.print(),
+    },
+  ];
+
+  const groupedActions = [
+    { groupLabel: t('menu.import'),       ids: ['open-file'] },
+    { groupLabel: t('menu.export'),       ids: ['save-txt', 'save-md', 'save-docx'] },
+    { groupLabel: t('menu.share.section'), ids: ['share', 'print-preview', 'print-pdf'] },
+  ] as const;
+
+  const pinnedDefs = actionDefs.filter(a => pinnedActions.includes(a.id));
+
   return (
     <div className="app-root">
       <div className="app-menubar">
@@ -105,72 +188,77 @@ export function Home() {
 
           <ClipboardHistoryBtn history={clipboardHistory} />
 
+          {/* Pinned action buttons */}
+          {pinnedDefs.map(({ id, Icon, label, requiresNote, handler }) => (
+            <Button
+              key={id}
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              title={label}
+              disabled={requiresNote && !activeNote}
+              onClick={handler}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </Button>
+          ))}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                title="Dosya işlemleri"
+                title={t('menu.import')}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                {t('menu.import')}
-              </DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
-                <FolderOpen className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.open.file')}
-                <span className="ml-auto text-[10px] text-muted-foreground">.txt .md .docx</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                {t('menu.export')}
-              </DropdownMenuLabel>
-
-              <DropdownMenuItem onClick={handleSaveTxt} disabled={!activeNote}>
-                <FileText className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.save.txt')}
-                <span className="ml-auto text-[10px] text-muted-foreground">.txt</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleSaveMd} disabled={!activeNote}>
-                <Download className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.save.md')}
-                <span className="ml-auto text-[10px] text-muted-foreground">.md</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={handleSaveDocx} disabled={!activeNote}>
-                <FileDown className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.save.docx')}
-                <span className="ml-auto text-[10px] text-muted-foreground">.docx</span>
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                {t('menu.share.section')}
-              </DropdownMenuLabel>
-
-              <DropdownMenuItem onClick={handleShare} disabled={!activeNote}>
-                {shareCopied
-                  ? <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
-                  : <Link className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                }
-                {shareCopied ? t('menu.link.copied') : t('menu.copy.link')}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={() => setShowPrintPreview(true)} disabled={!activeNote}>
-                <Eye className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.print.preview')}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem onClick={() => window.print()} disabled={!activeNote}>
-                <Printer className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                {t('menu.print.pdf')}
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-52">
+              {groupedActions.map((group, gi) => (
+                <span key={group.groupLabel}>
+                  {gi > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
+                    {group.groupLabel}
+                  </DropdownMenuLabel>
+                  {group.ids.map(id => {
+                    const def = actionDefs.find(a => a.id === id)!;
+                    const pinned = pinnedActions.includes(id);
+                    return (
+                      <DropdownMenuItem
+                        key={id}
+                        disabled={def.requiresNote && !activeNote}
+                        onSelect={def.handler}
+                        className="flex items-center gap-2 pr-1"
+                      >
+                        <def.Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="flex-1 min-w-0 truncate">{def.label}</span>
+                        {def.ext && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">{def.ext}</span>
+                        )}
+                        <button
+                          className={`ml-1 p-1 rounded transition-colors shrink-0 ${
+                            pinned
+                              ? 'text-primary hover:text-primary/70'
+                              : 'text-muted-foreground/40 hover:text-muted-foreground'
+                          }`}
+                          title={pinned ? 'Toolbardan kaldır' : 'Toolbara ekle'}
+                          onPointerDown={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            togglePin(id as PinnableActionId);
+                          }}
+                        >
+                          {pinned
+                            ? <Pin className="h-3 w-3" />
+                            : <PinOff className="h-3 w-3" />
+                          }
+                        </button>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </span>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
