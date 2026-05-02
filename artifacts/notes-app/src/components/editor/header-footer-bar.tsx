@@ -14,6 +14,7 @@ interface Props {
   marginRight: number;
   height: number;
   onChange: (updates: Partial<HeaderFooter>) => void;
+  topOverride?: number;
 }
 
 const TOKENS = [
@@ -251,7 +252,7 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
 }
 
 export function HeaderFooterBar({
-  data, type, noteTitle, pageNumber = 1, marginLeft, marginRight, height, onChange,
+  data, type, noteTitle, pageNumber = 1, marginLeft, marginRight, height, onChange, topOverride,
 }: Props) {
   const [activeZone, setActiveZone] = useState<'left' | 'center' | 'right' | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -275,7 +276,10 @@ export function HeaderFooterBar({
     <div
       ref={barRef}
       className={`hf-bar hf-bar-${type} ${activeZone ? 'hf-bar-editing' : ''}`}
-      style={{ height, paddingLeft: marginLeft, paddingRight: marginRight }}
+      style={{
+        height, paddingLeft: marginLeft, paddingRight: marginRight,
+        ...(topOverride !== undefined ? { top: topOverride, bottom: 'auto' } : {}),
+      }}
     >
       {zones.map(zone => (
         <div

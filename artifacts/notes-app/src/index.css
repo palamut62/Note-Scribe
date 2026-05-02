@@ -640,10 +640,28 @@
 
 .page-pattern-overlay {
   position: absolute;
-  left: 0;
-  right: 0;
   pointer-events: none;
   z-index: 0;
+}
+
+/* Print-preview pattern overlays (always light theme) */
+.pp-pattern-lines {
+  background-image: repeating-linear-gradient(
+    transparent, transparent 27px,
+    rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+  );
+}
+
+.pp-pattern-grid {
+  background-image:
+    repeating-linear-gradient(
+      transparent, transparent 27px,
+      rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+    ),
+    repeating-linear-gradient(
+      90deg, transparent, transparent 27px,
+      rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+    );
 }
 
 /* TipTap Editor Styles */

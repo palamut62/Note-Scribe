@@ -28,38 +28,130 @@ interface Props {
 const PAGE_H = 1123;   // A4 height at 96 dpi
 const SEP_H  = 21;     // separator band height (must match CSS gradient gap)
 
-function PageLabels({ pageRef }: { pageRef: React.RefObject<HTMLDivElement> }) {
-  const [totalH, setTotalH] = useState(PAGE_H);
+function resolveHFTokens(text: string, title: string, page: number): string {
+  const today = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return text.replace(/\{sayfa\}/g, String(page)).replace(/\{tarih\}/g, today).replace(/\{başlık\}/g, title);
+}
 
+function normalizeHFZone(z: unknown): HFZone {
+  if (!z) return { text: '' };
+  if (typeof z === 'string') return { text: z };
+  return z as HFZone;
+}
+
+function HFPageOverlay({
+  data, noteTitle, pageNumber, marginLeft, marginRight, height, type, pageTop,
+}: {
+  data: HeaderFooter; noteTitle: string; pageNumber: number;
+  marginLeft: number; marginRight: number; height: number;
+  type: 'header' | 'footer'; pageTop: number;
+}) {
+  if (!data.visible) return null;
+  const topPos = type === 'header' ? pageTop : pageTop + PAGE_H - height;
+  const zones = (['left', 'center', 'right'] as const).map(pos => {
+    const zone = normalizeHFZone(data[pos]);
+    const imgH = zone.imageHeight ?? 24;
+    const hasImg = !!zone.image;
+    const hasText = !!zone.text?.trim();
+    if (!hasImg && !hasText) return <div key={pos} style={{ flex: 1 }} />;
+    const align = zone.align ?? pos;
+    const justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' } as const;
+    return (
+      <div key={pos} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: justifyMap[align], gap: 4 }}>
+        {hasImg && <img src={zone.image} alt="" style={{ height: imgH, objectFit: 'contain' }} />}
+        {hasText && (
+          <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', whiteSpace: 'pre' }}>
+            {resolveHFTokens(zone.text, noteTitle, pageNumber)}
+          </span>
+        )}
+      </div>
+    );
+  });
+  return (
+    <div style={{
+      position: 'absolute', top: topPos, left: 0, right: 0, height,
+      paddingLeft: marginLeft, paddingRight: marginRight,
+      display: 'flex', alignItems: 'center',
+      background: 'hsl(var(--card))',
+      borderTop: type === 'footer' ? '1px dashed hsl(var(--border) / 0.5)' : undefined,
+      borderBottom: type === 'header' ? '1px dashed hsl(var(--border) / 0.5)' : undefined,
+      zIndex: 3, boxSizing: 'border-box', pointerEvents: 'none',
+    }}>
+      {zones}
+    </div>
+  );
+}
+
+function PageOverlays({
+  pageRef, header, footer, noteTitle,
+  marginLeft, marginRight, marginTop, marginBottom, showBorder,
+}: {
+  pageRef: React.RefObject<HTMLDivElement>;
+  header: HeaderFooter; footer: HeaderFooter;
+  noteTitle: string;
+  marginLeft: number; marginRight: number; marginTop: number; marginBottom: number;
+  showBorder: boolean;
+}) {
+  const [totalH, setTotalH] = useState(PAGE_H);
   useEffect(() => {
     const el = pageRef.current;
     if (!el) return;
-    const obs = new ResizeObserver(entries => {
-      setTotalH(entries[0].contentRect.height);
-    });
+    const obs = new ResizeObserver(entries => { setTotalH(entries[0].contentRect.height); });
     obs.observe(el);
     return () => obs.disconnect();
   }, [pageRef]);
 
   const count = Math.max(1, Math.ceil(totalH / (PAGE_H + SEP_H)));
-  const labels: React.ReactNode[] = [];
+  const nodes: React.ReactNode[] = [];
 
-  // "Sayfa 1" label at top
-  labels.push(
-    <div key="p1" className="page-first-label">Sayfa 1</div>
-  );
+  nodes.push(<div key="p1" className="page-first-label">Sayfa 1</div>);
 
-  // separator labels at each page boundary
-  for (let i = 1; i < count; i++) {
-    const top = PAGE_H * i + SEP_H * (i - 1);
-    labels.push(
-      <div key={`sep-${i}`} className="page-sep-label" style={{ top }}>
-        <span className="page-sep-num">Sayfa {i + 1}</span>
-      </div>
+  if (showBorder) {
+    nodes.push(
+      <div key="border-0" style={{
+        position: 'absolute', top: marginTop, left: marginLeft, right: marginRight,
+        height: PAGE_H - marginTop - marginBottom,
+        border: '1px solid var(--pattern-line)', pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
+      }} />
     );
   }
 
-  return <>{labels}</>;
+  for (let i = 1; i < count; i++) {
+    const labelTop = PAGE_H * i + SEP_H * (i - 1);
+    const pageTop  = (PAGE_H + SEP_H) * i;
+    nodes.push(
+      <div key={`sep-${i}`} className="page-sep-label" style={{ top: labelTop }}>
+        <span className="page-sep-num">Sayfa {i + 1}</span>
+      </div>
+    );
+    nodes.push(
+      <HFPageOverlay
+        key={`hdr-${i}`}
+        data={header} noteTitle={noteTitle} pageNumber={i + 1}
+        marginLeft={marginLeft} marginRight={marginRight}
+        height={marginTop} type="header" pageTop={pageTop}
+      />
+    );
+    nodes.push(
+      <HFPageOverlay
+        key={`ftr-${i}`}
+        data={footer} noteTitle={noteTitle} pageNumber={i + 1}
+        marginLeft={marginLeft} marginRight={marginRight}
+        height={marginBottom} type="footer" pageTop={pageTop}
+      />
+    );
+    if (showBorder) {
+      nodes.push(
+        <div key={`border-${i}`} style={{
+          position: 'absolute', top: pageTop + marginTop, left: marginLeft, right: marginRight,
+          height: PAGE_H - marginTop - marginBottom,
+          border: '1px solid var(--pattern-line)', pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
+        }} />
+      );
+    }
+  }
+
+  return <>{nodes}</>;
 }
 
 function countWords(text: string): number {
@@ -254,13 +346,23 @@ export function NoteEditor({ note }: Props) {
 
       <div className="editor-scroll" onClick={handlePageClick}>
         <div className="editor-page" ref={pageRef}>
-          <PageLabels pageRef={pageRef} />
+          <PageOverlays
+            pageRef={pageRef}
+            header={safeHeader}
+            footer={safeFooter}
+            noteTitle={note.title}
+            marginLeft={settings.marginLeft ?? 80}
+            marginRight={settings.marginRight ?? 80}
+            marginTop={settings.marginTop ?? 80}
+            marginBottom={settings.marginBottom ?? 120}
+            showBorder={!!bgClass}
+          />
           {bgClass && (
             <div
               className={`page-pattern-overlay ${bgClass}`}
               style={{
-                top: settings.marginTop ?? 80,
-                bottom: settings.marginBottom ?? 120,
+                top: 0,
+                bottom: 0,
                 left: settings.marginLeft ?? 80,
                 right: settings.marginRight ?? 80,
               }}
@@ -310,7 +412,7 @@ export function NoteEditor({ note }: Props) {
             <EditorContent editor={editor} />
           </div>
 
-          {/* Footer */}
+          {/* Footer — pinned to bottom of page 1 */}
           <HeaderFooterBar
             data={safeFooter}
             type="footer"
@@ -319,6 +421,7 @@ export function NoteEditor({ note }: Props) {
             marginLeft={settings.marginLeft ?? 80}
             marginRight={settings.marginRight ?? 80}
             height={settings.marginBottom ?? 120}
+            topOverride={PAGE_H - (settings.marginBottom ?? 120)}
             onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
           />
         </div>

@@ -96,6 +96,8 @@ export function PrintPreview({ note, settings, onClose }: Props) {
   const mBottom = settings.marginBottom ?? 120;
   const mLeft   = settings.marginLeft   ?? 80;
   const mRight  = settings.marginRight  ?? 80;
+  const pattern = settings.backgroundPattern ?? 'none';
+  const hasPattern = pattern !== 'none';
 
   const safeHeader = migrateHF(note.header);
   const safeFooter = migrateHF(note.footer, '{sayfa}');
@@ -137,6 +139,23 @@ export function PrintPreview({ note, settings, onClose }: Props) {
       {/* Scroll area */}
       <div className="pp-scroll">
         <div id="pp-page" className="pp-page">
+          {/* Background pattern + border */}
+          {hasPattern && (
+            <>
+              <div
+                className={pattern === 'lines' ? 'pp-pattern-lines' : 'pp-pattern-grid'}
+                style={{
+                  position: 'absolute', top: mTop, left: mLeft, right: mRight, bottom: mBottom,
+                  pointerEvents: 'none', zIndex: 0,
+                }}
+              />
+              <div style={{
+                position: 'absolute', top: mTop, left: mLeft, right: mRight, bottom: mBottom,
+                border: '1px solid rgba(0,0,0,0.14)',
+                pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
+              }} />
+            </>
+          )}
           {/* Header */}
           {safeHeader.visible && (
             <div
