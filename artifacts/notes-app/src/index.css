@@ -528,14 +528,67 @@
   flex-shrink: 0;
   margin: 0 auto;
   background: hsl(var(--card));
+  /* Visual page separators every 1123px (A4 height at 96dpi) */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(1123px - 1px),
+    hsl(var(--border)) calc(1123px - 1px),
+    hsl(var(--border)) 1123px,
+    hsl(var(--muted) / 0.85) 1123px,
+    hsl(var(--muted) / 0.85) calc(1123px + 20px),
+    hsl(var(--border)) calc(1123px + 20px),
+    hsl(var(--border)) calc(1123px + 21px),
+    transparent calc(1123px + 21px)
+  );
   box-shadow: 0 2px 12px 0 hsl(0 0% 0% / 0.12), 0 0 0 1px hsl(var(--border));
   position: relative;
+  overflow: visible;
 }
 
 [data-theme="dark"] .editor-page,
 [data-theme="dark-blue"] .editor-page,
 [data-theme="green-black"] .editor-page {
   box-shadow: 0 4px 24px 0 hsl(0 0% 0% / 0.5), 0 0 0 1.5px hsl(var(--border) / 0.9);
+}
+
+/* Page break separator & number labels */
+.page-sep-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 21px;          /* matches gradient gap height */
+  pointer-events: none;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.page-sep-num {
+  position: absolute;
+  right: -52px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.8;
+}
+
+.page-first-label {
+  position: absolute;
+  right: -52px;
+  top: 6px;
+  font-size: 10px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.8;
 }
 
 .editor-content-area {

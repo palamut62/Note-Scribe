@@ -25,6 +25,43 @@ interface Props {
   note: Note;
 }
 
+const PAGE_H = 1123;   // A4 height at 96 dpi
+const SEP_H  = 21;     // separator band height (must match CSS gradient gap)
+
+function PageLabels({ pageRef }: { pageRef: React.RefObject<HTMLDivElement> }) {
+  const [totalH, setTotalH] = useState(PAGE_H);
+
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      setTotalH(entries[0].contentRect.height);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [pageRef]);
+
+  const count = Math.max(1, Math.ceil(totalH / (PAGE_H + SEP_H)));
+  const labels: React.ReactNode[] = [];
+
+  // "Sayfa 1" label at top
+  labels.push(
+    <div key="p1" className="page-first-label">Sayfa 1</div>
+  );
+
+  // separator labels at each page boundary
+  for (let i = 1; i < count; i++) {
+    const top = PAGE_H * i + SEP_H * (i - 1);
+    labels.push(
+      <div key={`sep-${i}`} className="page-sep-label" style={{ top }}>
+        <span className="page-sep-num">Sayfa {i + 1}</span>
+      </div>
+    );
+  }
+
+  return <>{labels}</>;
+}
+
 function countWords(text: string): number {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
 }
@@ -38,6 +75,7 @@ export function NoteEditor({ note }: Props) {
   const [charCount, setCharCount] = useState(0);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -215,7 +253,8 @@ export function NoteEditor({ note }: Props) {
       )}
 
       <div className="editor-scroll" onClick={handlePageClick}>
-        <div className="editor-page">
+        <div className="editor-page" ref={pageRef}>
+          <PageLabels pageRef={pageRef} />
           {bgClass && (
             <div
               className={`page-pattern-overlay ${bgClass}`}
