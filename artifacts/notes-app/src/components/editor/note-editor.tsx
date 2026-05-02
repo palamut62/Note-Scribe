@@ -368,7 +368,7 @@ export function NoteEditor({ note }: Props) {
             marginRight={settings.marginRight ?? 80}
             marginTop={settings.marginTop ?? 80}
             marginBottom={settings.marginBottom ?? 120}
-            showBorder={!!bgClass}
+            showBorder={settings.backgroundPattern === 'grid'}
             bgClass={bgClass || undefined}
           />
           {bgClass && (
