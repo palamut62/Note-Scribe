@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -24,9 +24,7 @@ export function NoteEditor({ note }: Props) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-      }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Underline,
       TextStyle,
       Color,
@@ -38,40 +36,29 @@ export function NoteEditor({ note }: Props) {
     ],
     content: note.content,
     editorProps: {
-      attributes: {
-        class: 'tiptap focus:outline-none min-h-[500px] pb-32',
-      },
+      attributes: { class: 'tiptap focus:outline-none min-h-[500px] pb-32' },
     },
     onUpdate: ({ editor }) => {
-      // Debounce this in a real app, but for simplicity here we save on every keystroke 
-      // via local state, or rely on a higher level debouncer. Actually we should just update note content.
       updateNote(note.id, { content: editor.getHTML() });
     },
   });
 
-  // Sync content when switching notes, but avoid resetting while typing
-  useEffect(() => {
-    if (editor && editor.getHTML() !== note.content) {
-      // Only set content if the note actually changed from outside (e.g. note switch)
-      // to avoid cursor jumping
-      const isSameNote = editor.storage.currentNoteId === note.id;
-      if (!isSameNote) {
-        editor.commands.setContent(note.content);
-        editor.storage.currentNoteId = note.id;
-      }
-    }
-  }, [note.id, note.content, editor]);
-
   useEffect(() => {
     if (editor) {
-      editor.storage.currentNoteId = note.id;
-      // focus editor on new note
-      if (!note.content) {
+      const isSameNote = editor.storage.currentNoteId === note.id;
+      if (!isSameNote) {
+        editor.commands.setContent(note.content || '');
+        editor.storage.currentNoteId = note.id;
         setTimeout(() => editor.commands.focus(), 10);
       }
     }
-  }, [editor, note.id]);
+  }, [note.id]);
 
+  useEffect(() => {
+    if (editor && !editor.storage.currentNoteId) {
+      editor.storage.currentNoteId = note.id;
+    }
+  }, [editor]);
 
   const handleAddTextbox = () => {
     const newTb: TextBox = {
@@ -82,43 +69,44 @@ export function NoteEditor({ note }: Props) {
       height: 150,
       content: '',
       borderStyle: 'solid',
-      borderColor: '#e5e0d5',
-      backgroundColor: '#fffbeb', // soft yellow default
-      textColor: '#2c2a29',
-      fontSize: 16,
+      borderColor: '#cccccc',
+      backgroundColor: '#fffde7',
+      textColor: '#222222',
+      fontSize: 14,
     };
     updateNote(note.id, { textboxes: [...note.textboxes, newTb] });
     setActiveTextboxId(newTb.id);
   };
 
   const updateTextbox = (tbId: string, updates: Partial<TextBox>) => {
-    const newTextboxes = note.textboxes.map(tb => tb.id === tbId ? { ...tb, ...updates } : tb);
+    const newTextboxes = note.textboxes.map(tb =>
+      tb.id === tbId ? { ...tb, ...updates } : tb
+    );
     updateNote(note.id, { textboxes: newTextboxes });
   };
 
   const deleteTextbox = (tbId: string) => {
-    updateNote(note.id, { textboxes: note.textboxes.filter(tb => tb.id !== tbId) });
+    updateNote(note.id, {
+      textboxes: note.textboxes.filter(tb => tb.id !== tbId),
+    });
   };
 
-  const getBackgroundClass = () => {
-    switch (settings.backgroundPattern) {
-      case 'lines': return 'bg-pattern-lines';
-      case 'grid': return 'bg-pattern-grid';
-      default: return '';
-    }
-  };
+  const bgClass =
+    settings.backgroundPattern === 'lines'
+      ? 'bg-pattern-lines'
+      : settings.backgroundPattern === 'grid'
+      ? 'bg-pattern-grid'
+      : '';
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-muted/30">
+    <div className="editor-shell">
       <EditorToolbar editor={editor} onAddTextbox={handleAddTextbox} />
-      
-      <div 
-        className="flex-1 overflow-y-auto px-4 sm:px-12 py-8"
+
+      <div
+        className="editor-scroll"
         onClick={() => setActiveTextboxId(null)}
       >
-        <div 
-          className={`max-w-4xl mx-auto w-full min-h-[1000px] bg-card text-card-foreground shadow-sm rounded-sm relative border border-border/50 ${getBackgroundClass()}`}
-        >
+        <div className={`editor-page ${bgClass}`}>
           {note.textboxes.map(tb => (
             <FloatingTextbox
               key={tb.id}
@@ -130,18 +118,8 @@ export function NoteEditor({ note }: Props) {
             />
           ))}
 
-          <div className="px-12 pt-12 pb-24 outline-none">
-            <input 
-              type="text"
-              value={note.title}
-              onChange={(e) => updateNote(note.id, { title: e.target.value })}
-              placeholder="Untitled Note"
-              className="text-4xl font-serif font-bold w-full bg-transparent outline-none mb-6 placeholder:text-muted-foreground/40 leading-[1.2]"
-            />
-            
-            <div className="pt-[6px]"> {/* Alignment offset for baseline */}
-              <EditorContent editor={editor} />
-            </div>
+          <div className="editor-content-area">
+            <EditorContent editor={editor} />
           </div>
         </div>
       </div>
