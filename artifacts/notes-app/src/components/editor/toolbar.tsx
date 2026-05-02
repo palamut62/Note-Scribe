@@ -507,7 +507,6 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
           title="AI ile Türkçeye çevir — seçili metni veya tüm sayfayı çevirir"
         >
           <Languages className={`h-3.5 w-3.5 ${isTranslating ? 'animate-pulse' : ''}`} />
-          {isTranslating ? 'Çevriliyor...' : 'Çevir'}
         </Button>
 
         <Button
@@ -519,7 +518,6 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
           title="AI ile düzelt"
         >
           <Wand2 className={`h-3.5 w-3.5 ${isFixing ? 'animate-pulse' : ''}`} />
-          {isFixing ? 'Düzeltiliyor...' : 'AI Düzelt'}
         </Button>
       </div>
 
