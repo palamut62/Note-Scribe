@@ -309,6 +309,14 @@
   }
 }
 
+/* ─── Hidden scrollbar utility ─────────────────────────────────────────────── */
+.settings-scroll {
+  scrollbar-width: none;
+}
+.settings-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* ─── App shell ─────────────────────────────────────────────────────────── */
 .app-root {
   display: flex;
@@ -520,8 +528,14 @@
   flex-shrink: 0;
   margin: 0 auto;
   background: hsl(var(--card));
-  box-shadow: 0 2px 12px 0 hsl(0 0% 0% / 0.12), 0 0 0 1px hsl(var(--border) / 0.5);
+  box-shadow: 0 2px 12px 0 hsl(0 0% 0% / 0.12), 0 0 0 1px hsl(var(--border));
   position: relative;
+}
+
+[data-theme="dark"] .editor-page,
+[data-theme="dark-blue"] .editor-page,
+[data-theme="green-black"] .editor-page {
+  box-shadow: 0 4px 24px 0 hsl(0 0% 0% / 0.5), 0 0 0 1.5px hsl(var(--border) / 0.9);
 }
 
 .editor-content-area {
