@@ -12,6 +12,7 @@ import {
   FileDown, Link, Filter,
 } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
+import mammoth from 'mammoth';
 
 export function Home() {
   const { notes, activeNoteId, createNote, updateNote, settings } = useApp();
@@ -51,9 +52,19 @@ export function Home() {
     await exportDocx(activeNote);
   };
 
-  const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleOpenFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      const arrayBuffer = await file.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const title = file.name.replace(/\.docx$/i, '');
+      createNote({ title, content: result.value });
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const raw = reader.result as string;
@@ -65,7 +76,6 @@ export function Home() {
       createNote({ title, content });
     };
     reader.readAsText(file);
-    e.target.value = '';
   };
 
   const handleShare = async () => {
@@ -89,7 +99,7 @@ export function Home() {
           >
             <FolderOpen className="h-3.5 w-3.5 mr-1" />Aç
           </Button>
-          <input ref={fileInputRef} type="file" accept=".txt,.md" className="hidden" onChange={handleOpenFile} />
+          <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
 
           <Button
             variant="ghost" size="sm"
