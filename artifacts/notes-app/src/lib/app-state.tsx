@@ -6,7 +6,7 @@ interface AppContextType {
   activeNoteId: string | null;
   settings: Settings;
   setActiveNoteId: (id: string | null) => void;
-  createNote: () => void;
+  createNote: (initial?: { title?: string; content?: string }) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   updateSettings: (updates: Partial<Settings>) => void;
@@ -50,11 +50,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('notes-settings', JSON.stringify(settings));
   }, [settings]);
 
-  const createNote = useCallback(() => {
+  const createNote = useCallback((initial?: { title?: string; content?: string }) => {
     const newNote: Note = {
       id: crypto.randomUUID(),
-      title: 'Untitled Note',
-      content: '',
+      title: initial?.title || 'Untitled Note',
+      content: initial?.content || '',
       textboxes: [],
       images: [],
       createdAt: new Date().toISOString(),

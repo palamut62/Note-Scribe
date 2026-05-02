@@ -31,21 +31,13 @@ export function Home() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      const text = reader.result as string;
-      const isMarkdown = file.name.endsWith('.md');
+      const raw = reader.result as string;
       const title = file.name.replace(/\.(txt|md)$/i, '');
-      createNote();
-      setTimeout(() => {
-        const latest = notes[0];
-        if (latest) {
-          updateNote(latest.id, {
-            title,
-            content: isMarkdown
-              ? `<p>${text.replace(/\n/g, '</p><p>')}</p>`
-              : `<p>${text.replace(/\n/g, '</p><p>')}</p>`,
-          });
-        }
-      }, 50);
+      const content = raw
+        .split('\n')
+        .map(line => `<p>${line || '<br>'}</p>`)
+        .join('');
+      createNote({ title, content });
     };
     reader.readAsText(file);
     e.target.value = '';
