@@ -416,17 +416,50 @@ export function NoteEditor({ note }: Props) {
           onClear={() => drawCanvasRef.current?.clear()}
           onExit={() => setDrawMode(false)}
           onSavePng={async () => {
-            if (!pageRef.current) return;
+            const page = pageRef.current;
+            if (!page) return;
+
+            const SCALE = 2;
+            const pw = page.offsetWidth;
+            const ph = page.offsetHeight;
+
+            // 1. Temporarily hide the drawing canvas so html2canvas
+            //    only captures text/layout (avoids compositing bugs)
+            const drawEl = drawCanvasRef.current?.getCanvas();
+            if (drawEl) drawEl.style.visibility = 'hidden';
+
             const html2canvas = (await import('html2canvas')).default;
-            const canvas = await html2canvas(pageRef.current, {
-              scale: 2,
+            const pageSnapshot = await html2canvas(page, {
+              scale: SCALE,
               useCORS: true,
               backgroundColor: '#ffffff',
               logging: false,
+              scrollX: 0,
+              scrollY: 0,
             });
+
+            if (drawEl) drawEl.style.visibility = '';
+
+            // 2. Create final composite canvas
+            const final = document.createElement('canvas');
+            final.width  = pw * SCALE;
+            final.height = ph * SCALE;
+            const ctx = final.getContext('2d')!;
+
+            // Draw the page (text / layout)
+            ctx.drawImage(pageSnapshot, 0, 0);
+
+            // 3. Render drawing ops into a 1× canvas then scale-blit onto final
+            //    so coordinates stay pixel-perfect at any DPR / scale
+            const tmp = document.createElement('canvas');
+            tmp.width  = pw;
+            tmp.height = ph;
+            drawCanvasRef.current?.renderOpsToCanvas(tmp);
+            ctx.drawImage(tmp, 0, 0, pw * SCALE, ph * SCALE);
+
             const link = document.createElement('a');
             link.download = `${note.title || 'Not'}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = final.toDataURL('image/png');
             link.click();
           }}
         />

@@ -4,6 +4,8 @@ import type { DrawOp, DrawTool } from '@/lib/types';
 export interface DrawingCanvasHandle {
   undo: () => void;
   clear: () => void;
+  getCanvas: () => HTMLCanvasElement | null;
+  renderOpsToCanvas: (target: HTMLCanvasElement) => void;
 }
 
 interface Props {
@@ -26,6 +28,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
     useImperativeHandle(ref, () => ({
       undo:  () => { if (opsRef.current.length > 0) onOpsChange(opsRef.current.slice(0, -1)); },
       clear: () => onOpsChange([]),
+      getCanvas: () => canvasRef.current,
+      renderOpsToCanvas: (target: HTMLCanvasElement) => {
+        const ctx = target.getContext('2d');
+        if (!ctx) return;
+        for (const op of opsRef.current) renderOp(ctx, op);
+      },
     }));
 
     const redraw = useCallback(() => {
