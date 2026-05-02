@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -19,6 +19,7 @@ import { FloatingTextbox } from '../floating-textbox';
 import { FloatingImage as FloatingImageComponent } from '../floating-image';
 import { FindReplace } from './find-replace';
 import { HeaderFooterBar } from './header-footer-bar';
+import { AutoCorrectExtension } from './auto-correct-extension';
 
 interface Props {
   note: Note;
@@ -35,6 +36,8 @@ export function NoteEditor({ note }: Props) {
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
+  const settingsRef = useRef(settings);
+  useEffect(() => { settingsRef.current = settings; }, [settings]);
 
   const editor = useEditor({
     extensions: [
@@ -53,6 +56,17 @@ export function NoteEditor({ note }: Props) {
       TableHeader,
       TableCell,
       Link.configure({ openOnClick: false, autolink: true }),
+      AutoCorrectExtension.configure({
+        getSettings: () => {
+          const s = settingsRef.current;
+          return {
+            enabled: s.autoCorrect ?? false,
+            provider: s.provider,
+            apiKey: s.provider === 'openrouter' ? s.openrouterApiKey : s.nvidiaApiKey,
+            model: s.provider === 'openrouter' ? s.openrouterModel : s.nvidiaModel,
+          };
+        },
+      }),
     ],
     content: note.content,
     editorProps: {

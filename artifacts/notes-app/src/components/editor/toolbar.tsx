@@ -5,7 +5,7 @@ import {
   List, ListOrdered, CheckSquare,
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
-  Quote, Minus, CalendarDays, LayoutTemplate,
+  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -91,7 +91,7 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
 }
 
 export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
-  const { settings, updateNote } = useApp();
+  const { settings, updateNote, updateSettings } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -122,6 +122,42 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
     });
     editor.chain().focus().insertContent(today).run();
   };
+
+  const applyCase = (mode: 'upper' | 'lower' | 'title' | 'sentence') => {
+    const { from, to, empty } = editor.state.selection;
+    let text = empty
+      ? editor.state.doc.textBetween(0, editor.state.doc.content.size, ' ')
+      : editor.state.doc.textBetween(from, to, ' ');
+    if (!text) return;
+
+    const tr = (s: string) => {
+      switch (mode) {
+        case 'upper': return s.toLocaleUpperCase('tr-TR');
+        case 'lower': return s.toLocaleLowerCase('tr-TR');
+        case 'title': return s.replace(/\S+/g, w => {
+          const f = w[0];
+          const up = f === 'i' ? 'İ' : f === 'ı' ? 'I' : f.toLocaleUpperCase('tr-TR');
+          return up + w.slice(1).toLocaleLowerCase('tr-TR');
+        });
+        case 'sentence': {
+          const lower = s.toLocaleLowerCase('tr-TR');
+          const f = lower[0];
+          const up = f === 'i' ? 'İ' : f === 'ı' ? 'I' : f.toLocaleUpperCase('tr-TR');
+          return up + lower.slice(1);
+        }
+      }
+    };
+
+    if (empty) {
+      editor.commands.selectAll();
+      editor.commands.insertContent(tr(text));
+    } else {
+      editor.chain().focus().setTextSelection({ from, to }).insertContent(tr(text)).run();
+    }
+  };
+
+  const [caseOpen, setCaseOpen] = useState(false);
+  const caseRef = useRef<HTMLDivElement>(null);
 
   const handleFixText = async () => {
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
@@ -364,6 +400,52 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Tarih ekle">
           <CalendarDays className="h-3.5 w-3.5" />
         </Button>
+
+        <Divider />
+
+        {/* Case transforms */}
+        <div ref={caseRef} className="relative">
+          <button
+            className="case-dropdown-trigger"
+            title="Harf büyüklüğü"
+            onClick={() => setCaseOpen(v => !v)}
+          >
+            <span style={{ fontWeight: 700, fontSize: 11 }}>Aa</span>
+            <ChevronDown size={9} />
+          </button>
+          {caseOpen && (
+            <div className="case-dropdown-menu" onMouseLeave={() => setCaseOpen(false)}>
+              <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('upper'); }}>
+                <span className="case-preview">BÜYÜK</span>
+                <span className="case-desc">Tümü büyük harf</span>
+              </button>
+              <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('lower'); }}>
+                <span className="case-preview" style={{ textTransform: 'none' }}>küçük</span>
+                <span className="case-desc">Tümü küçük harf</span>
+              </button>
+              <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('title'); }}>
+                <span className="case-preview" style={{ textTransform: 'none' }}>Her Kelime</span>
+                <span className="case-desc">Her kelime büyük başlar</span>
+              </button>
+              <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('sentence'); }}>
+                <span className="case-preview" style={{ textTransform: 'none' }}>Cümle başı</span>
+                <span className="case-desc">Sadece ilk harf büyük</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <Divider />
+
+        {/* Auto-correct toggle */}
+        <button
+          className={`autocorrect-toggle-btn ${(settings.autoCorrect ?? false) ? 'autocorrect-toggle-on' : ''}`}
+          onClick={() => updateSettings({ autoCorrect: !(settings.autoCorrect ?? false) })}
+          title={`Otomatik düzeltme ${settings.autoCorrect ? 'açık' : 'kapalı'} — boşluk tuşuyla son kelimeyi AI düzeltir`}
+        >
+          <Sparkles size={11} />
+          <span>Oto Düzelt</span>
+        </button>
 
         <Divider />
 

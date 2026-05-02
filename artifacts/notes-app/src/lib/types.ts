@@ -68,4 +68,5 @@ export interface Settings {
   marginBottom: number;
   marginLeft: number;
   marginRight: number;
+  autoCorrect: boolean;
 }

@@ -25,6 +25,7 @@ const defaultSettings: Settings = {
   marginBottom: 120,
   marginLeft: 80,
   marginRight: 80,
+  autoCorrect: false,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

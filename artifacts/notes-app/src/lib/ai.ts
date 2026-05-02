@@ -35,6 +35,41 @@ export async function fixText(
   return data.choices?.[0]?.message?.content || text;
 }
 
+export async function fixWord(
+  word: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string
+): Promise<string> {
+  if (!apiKey || !model || !word.trim() || word.length < 2) return word;
+
+  const prompt =
+    `Aşağıdaki Türkçe kelimedeki yazım hatasını düzelt. Sadece düzeltilmiş kelimeyi döndür, başka hiçbir şey ekleme:\n\n${word}`;
+
+  try {
+    const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 20,
+        temperature: 0,
+      }),
+    });
+    if (!response.ok) return word;
+    const data = await response.json();
+    const result = (data.choices?.[0]?.message?.content || '').trim();
+    if (result && !result.includes('\n') && result.length <= word.length * 3) {
+      return result.split(/\s+/)[0] || word;
+    }
+  } catch {}
+  return word;
+}
+
 export async function fetchModels(
   provider: 'openrouter' | 'nvidia',
   apiKey: string

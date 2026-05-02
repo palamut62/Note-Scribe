@@ -1132,6 +1132,109 @@ ul[data-type="taskList"] li > div {
   border-color: hsl(var(--primary) / 0.4);
 }
 
+/* ─── Case transform dropdown ─────────────────────────────────────────────── */
+.case-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+  cursor: pointer;
+  font-family: var(--app-font-sans);
+  transition: background 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.case-dropdown-trigger:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--primary) / 0.4);
+}
+
+.case-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: 0 4px 16px hsl(0 0% 0% / 0.12);
+  z-index: 200;
+  overflow: hidden;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.case-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.case-menu-item:hover {
+  background: hsl(var(--accent));
+}
+
+.case-preview {
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  min-width: 72px;
+  text-transform: uppercase;
+}
+
+.case-desc {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ─── Auto-correct toggle ──────────────────────────────────────────────────── */
+.autocorrect-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--app-font-sans);
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.autocorrect-toggle-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+.autocorrect-toggle-on {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.4);
+}
+.autocorrect-toggle-on svg {
+  animation: sparkle-pulse 2s ease-in-out infinite;
+}
+@keyframes sparkle-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(0.85); }
+}
+
 /* ─── Find & Replace bar ───────────────────────────────────────────────────── */
 .find-replace-bar {
   display: flex;
