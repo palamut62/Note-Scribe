@@ -84,7 +84,7 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
             type="color"
             className="color-swatch-custom"
             onChange={e => { onSelect(e.target.value); setOpen(false); }}
-            title="Özel renk"
+            title="Custom color"
           />
         </div>
       )}
@@ -133,7 +133,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       : editor.state.doc.textBetween(from, to, ' ');
     if (!text) return;
 
-    const tr = (s: string) => {
+    const transform = (s: string) => {
       switch (mode) {
         case 'upper': return s.toLocaleUpperCase('tr-TR');
         case 'lower': return s.toLocaleLowerCase('tr-TR');
@@ -153,9 +153,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
     if (empty) {
       editor.commands.selectAll();
-      editor.commands.insertContent(tr(text));
+      editor.commands.insertContent(transform(text));
     } else {
-      editor.chain().focus().setTextSelection({ from, to }).insertContent(tr(text)).run();
+      editor.chain().focus().setTextSelection({ from, to }).insertContent(transform(text)).run();
     }
   };
 
@@ -166,7 +166,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Yapılandırılmadı', description: 'Ayarlar\'dan API anahtarı ve model seçin.', variant: 'destructive' });
+      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
       return;
     }
     const selection = editor.state.selection;
@@ -183,9 +183,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       } else {
         editor.commands.setContent(fixedText);
       }
-      toast({ title: 'Düzeltildi', description: 'AI metni başarıyla düzeltti.' });
+      toast({ title: 'Fixed', description: 'AI successfully fixed the text.' });
     } catch (err: any) {
-      toast({ title: 'Hata', description: err.message || 'Metin düzeltilemedi', variant: 'destructive' });
+      toast({ title: 'Error', description: err.message || 'Could not fix text', variant: 'destructive' });
     } finally {
       setIsFixing(false);
     }
@@ -195,7 +195,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Yapılandırılmadı', description: 'Ayarlar\'dan API anahtarı ve model seçin.', variant: 'destructive' });
+      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
       return;
     }
     const selection = editor.state.selection;
@@ -212,16 +212,16 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       } else {
         editor.commands.setContent(translated);
       }
-      toast({ title: 'Çevrildi', description: 'AI metni Türkçeye çevirdi.' });
+      toast({ title: 'Translated', description: 'AI translated the text to Turkish.' });
     } catch (err: any) {
-      toast({ title: 'Hata', description: err.message || 'Çeviri yapılamadı', variant: 'destructive' });
+      toast({ title: 'Error', description: err.message || 'Could not translate', variant: 'destructive' });
     } finally {
       setIsTranslating(false);
     }
   };
 
   const handleInsertLink = () => {
-    const url = window.prompt('URL girin:', 'https://');
+    const url = window.prompt('Enter URL:', 'https://');
     if (url) editor.chain().focus().setLink({ href: url }).run();
   };
 
@@ -246,7 +246,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
   return (
     <div className="toolbar-root">
-      {/* Row 1: paragraph style + font */}
+      {/* Row 1 */}
       <div className="toolbar-row">
         <Select
           value={
@@ -271,11 +271,11 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="p">Normal</SelectItem>
-            <SelectItem value="h1">Başlık 1</SelectItem>
-            <SelectItem value="h2">Başlık 2</SelectItem>
-            <SelectItem value="h3">Başlık 3</SelectItem>
-            <SelectItem value="code">Kod Bloğu</SelectItem>
-            <SelectItem value="quote">Alıntı</SelectItem>
+            <SelectItem value="h1">Heading 1</SelectItem>
+            <SelectItem value="h2">Heading 2</SelectItem>
+            <SelectItem value="h3">Heading 3</SelectItem>
+            <SelectItem value="code">Code Block</SelectItem>
+            <SelectItem value="quote">Quote</SelectItem>
           </SelectContent>
         </Select>
 
@@ -308,13 +308,13 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
               <SelectItem value="IBM Plex Serif" style={{ fontFamily: '"IBM Plex Serif"' }}>IBM Plex Serif</SelectItem>
             </SelectGroup>
             <SelectGroup>
-              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Daktilo</SelectLabel>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Typewriter</SelectLabel>
               <SelectItem value="Special Elite" style={{ fontFamily: '"Special Elite"' }}>Special Elite</SelectItem>
               <SelectItem value="Courier Prime" style={{ fontFamily: '"Courier Prime"' }}>Courier Prime</SelectItem>
               <SelectItem value="Cutive Mono" style={{ fontFamily: '"Cutive Mono"' }}>Cutive Mono</SelectItem>
             </SelectGroup>
             <SelectGroup>
-              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Geliştirici</SelectLabel>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Developer</SelectLabel>
               <SelectItem value="JetBrains Mono" style={{ fontFamily: '"JetBrains Mono"' }}>JetBrains Mono</SelectItem>
               <SelectItem value="Fira Code" style={{ fontFamily: '"Fira Code"' }}>Fira Code</SelectItem>
               <SelectItem value="Source Code Pro" style={{ fontFamily: '"Source Code Pro"' }}>Source Code Pro</SelectItem>
@@ -330,7 +330,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           onValueChange={val => editor.chain().focus().setFontSize(val).run()}
         >
           <SelectTrigger className="h-7 w-[68px] text-xs">
-            <SelectValue placeholder="Boyut" />
+            <SelectValue placeholder="Size" />
           </SelectTrigger>
           <SelectContent>
             {['10', '12', '14', '16', '18', '20', '24', '28', '32', '36', '48'].map(s => (
@@ -341,95 +341,89 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Divider />
 
-        {/* Text color */}
         <ColorSwatch
           colors={TEXT_COLORS}
           onSelect={c => editor.chain().focus().setColor(c).run()}
-          label="Yazı rengi"
+          label="Text color"
           currentColor={editor.getAttributes('textStyle').color || '#000000'}
           icon={<span className="text-[11px] font-bold leading-none select-none">A</span>}
         />
 
-        {/* Highlight color */}
         <ColorSwatch
           colors={HIGHLIGHT_COLORS}
           onSelect={c => {
             if (c === 'transparent') editor.chain().focus().unsetHighlight().run();
             else editor.chain().focus().setHighlight({ color: c }).run();
           }}
-          label="Vurgu rengi"
+          label="Highlight color"
           currentColor={editor.getAttributes('highlight').color || '#fef08a'}
           icon={<span className="text-[11px] font-bold leading-none select-none" style={{ background: 'linear-gradient(to bottom, transparent 50%, #fef08a 50%)' }}>A</span>}
         />
 
         <Divider />
 
-        {/* Format buttons */}
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('bold') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} title="Kalın (Ctrl+B)">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('bold') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold (Ctrl+B)">
           <Bold className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('italic') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} title="İtalik (Ctrl+I)">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('italic') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic (Ctrl+I)">
           <Italic className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('underline') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Altı çizili (Ctrl+U)">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('underline') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline (Ctrl+U)">
           <UnderlineIcon className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('strike') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} title="Üstü çizili">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('strike') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strikethrough">
           <Strikethrough className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('code') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleCode().run()} title="Satır içi kod">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('code') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleCode().run()} title="Inline code">
           <Code className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />
 
-        {/* Alignment */}
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'left' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Sola hizala">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'left' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left">
           <AlignLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'center' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Ortala">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'center' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Center">
           <AlignCenter className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'right' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Sağa hizala">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'right' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right">
           <AlignRight className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'justify' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="İki yana yasla">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'justify' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify">
           <AlignJustify className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />
 
-        {/* Lists */}
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('bulletList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Madde işaretli liste">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('bulletList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet list">
           <List className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('orderedList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numaralı liste">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('orderedList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered list">
           <ListOrdered className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive('taskList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleTaskList().run()} title="Todo listesi">
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('taskList') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleTaskList().run()} title="Task list">
           <CheckSquare className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />
 
-        {/* Insert */}
-        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertLink} title="Link ekle">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertLink} title="Add link">
           <LinkIcon className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={() => imageInputRef.current?.click()} title="Resim ekle">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={() => imageInputRef.current?.click()} title="Add image">
           <ImageIcon className="h-3.5 w-3.5" />
         </Button>
         <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertTable} title="Tablo ekle">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertTable} title="Add table">
           <TableIcon className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Yatay çizgi">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Horizontal rule">
           <Minus className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={onAddTextbox} title="Metin kutusu ekle">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={onAddTextbox} title="Add text box">
           <Square className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Tarih ekle">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Insert date">
           <CalendarDays className="h-3.5 w-3.5" />
         </Button>
 
@@ -439,7 +433,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
         <div ref={caseRef} className="relative">
           <button
             className="case-dropdown-trigger"
-            title="Harf büyüklüğü"
+            title="Letter case"
             onClick={() => setCaseOpen(v => !v)}
           >
             <span style={{ fontWeight: 700, fontSize: 11 }}>Aa</span>
@@ -448,20 +442,20 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           {caseOpen && (
             <div className="case-dropdown-menu" onMouseLeave={() => setCaseOpen(false)}>
               <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('upper'); }}>
-                <span className="case-preview">BÜYÜK</span>
-                <span className="case-desc">Tümü büyük harf</span>
+                <span className="case-preview">UPPERCASE</span>
+                <span className="case-desc">All uppercase</span>
               </button>
               <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('lower'); }}>
-                <span className="case-preview" style={{ textTransform: 'none' }}>küçük</span>
-                <span className="case-desc">Tümü küçük harf</span>
+                <span className="case-preview" style={{ textTransform: 'none' }}>lowercase</span>
+                <span className="case-desc">All lowercase</span>
               </button>
               <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('title'); }}>
-                <span className="case-preview" style={{ textTransform: 'none' }}>Her Kelime</span>
-                <span className="case-desc">Her kelime büyük başlar</span>
+                <span className="case-preview" style={{ textTransform: 'none' }}>Title Case</span>
+                <span className="case-desc">Each word capitalized</span>
               </button>
               <button className="case-menu-item" onMouseDown={e => { e.preventDefault(); setCaseOpen(false); applyCase('sentence'); }}>
-                <span className="case-preview" style={{ textTransform: 'none' }}>Cümle başı</span>
-                <span className="case-desc">Sadece ilk harf büyük</span>
+                <span className="case-preview" style={{ textTransform: 'none' }}>Sentence case</span>
+                <span className="case-desc">Only first letter uppercase</span>
               </button>
             </div>
           )}
@@ -469,14 +463,13 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Divider />
 
-        {/* Auto-correct toggle */}
         <button
           className={`autocorrect-toggle-btn ${(settings.autoCorrect ?? false) ? 'autocorrect-toggle-on' : ''}`}
           onClick={() => updateSettings({ autoCorrect: !(settings.autoCorrect ?? false) })}
-          title={`Otomatik düzeltme ${settings.autoCorrect ? 'açık' : 'kapalı'} — boşluk tuşuyla son kelimeyi AI düzeltir`}
+          title={`Auto Fix ${settings.autoCorrect ? 'on' : 'off'} — AI corrects last word on spacebar`}
         >
           <Sparkles size={11} />
-          <span>Oto Düzelt</span>
+          <span>Auto Fix</span>
         </button>
 
         <Divider />
@@ -494,7 +487,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Divider />
 
-        <Button variant="ghost" size="icon" className="tbtn" onClick={onToggleFindReplace} title="Bul & Değiştir (Ctrl+F)">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={onToggleFindReplace} title="Find & Replace (Ctrl+F)">
           <Search className="h-3.5 w-3.5" />
         </Button>
 
@@ -505,10 +498,10 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           size="sm"
           className={`h-7 text-xs gap-1 px-2 ${drawMode ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30' : 'text-muted-foreground'}`}
           onClick={onToggleDrawMode}
-          title="Çizim modunu aç/kapat"
+          title="Toggle drawing mode"
         >
           <Pencil className="h-3.5 w-3.5" />
-          <span>Çiz</span>
+          <span>Draw</span>
         </Button>
 
         <div className="flex-1" />
@@ -519,7 +512,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           className={`h-7 text-xs gap-1 px-2 ${isTranslating ? 'opacity-70' : 'text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40'}`}
           onClick={handleTranslate}
           disabled={isTranslating || isFixing}
-          title="AI ile Türkçeye çevir — seçili metni veya tüm sayfayı çevirir"
+          title="AI translate to Turkish — translates selected text or entire page"
         >
           <Languages className={`h-3.5 w-3.5 ${isTranslating ? 'animate-pulse' : ''}`} />
         </Button>
@@ -530,25 +523,25 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           className={`h-7 text-xs gap-1 px-2 ${isFixing ? 'opacity-70' : 'text-primary hover:bg-primary/10'}`}
           onClick={handleFixText}
           disabled={isFixing || isTranslating}
-          title="AI ile düzelt"
+          title="AI Fix"
         >
           <Wand2 className={`h-3.5 w-3.5 ${isFixing ? 'animate-pulse' : ''}`} />
         </Button>
       </div>
 
-      {/* Row 2: table controls (shown only when cursor is in a table) */}
+      {/* Row 2: table controls */}
       {isActive('table') && (
         <div className="toolbar-row toolbar-row-secondary">
-          <span className="text-[11px] text-muted-foreground mr-1">Tablo:</span>
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addColumnBefore().run()}>+ Sütun önce</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addColumnAfter().run()}>+ Sütun sonra</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().deleteColumn().run()}>- Sütun sil</Button>
+          <span className="text-[11px] text-muted-foreground mr-1">Table:</span>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addColumnBefore().run()}>+ Col before</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addColumnAfter().run()}>+ Col after</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().deleteColumn().run()}>− Col</Button>
           <Divider />
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addRowBefore().run()}>+ Satır önce</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addRowAfter().run()}>+ Satır sonra</Button>
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().deleteRow().run()}>- Satır sil</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addRowBefore().run()}>+ Row before</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().addRowAfter().run()}>+ Row after</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => editor.chain().focus().deleteRow().run()}>− Row</Button>
           <Divider />
-          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2 text-destructive" onClick={() => editor.chain().focus().deleteTable().run()}>Tabloyu sil</Button>
+          <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2 text-destructive" onClick={() => editor.chain().focus().deleteTable().run()}>Delete table</Button>
         </div>
       )}
     </div>

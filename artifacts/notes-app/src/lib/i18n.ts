@@ -2,7 +2,7 @@ import type { Language } from './types';
 
 const DICT = {
   tr: {
-    'app.title': 'Notlar',
+    'app.title': 'nootle.io',
     // home menu
     'menu.import': 'İçe Aktar',
     'menu.export': 'Dışa Aktar',
@@ -79,7 +79,7 @@ const DICT = {
     'settings.bg.grid': 'Kareli',
   },
   en: {
-    'app.title': 'Notes',
+    'app.title': 'nootle.io',
     // home menu
     'menu.import': 'Import',
     'menu.export': 'Export',
