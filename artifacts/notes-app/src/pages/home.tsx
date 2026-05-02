@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { TabBar } from '@/components/tab-bar';
 import { NoteEditor } from '@/components/editor/note-editor';
 import { SettingsDialog } from '@/components/settings-dialog';
@@ -24,6 +25,7 @@ import mammoth from 'mammoth';
 
 export function Home() {
   const { notes, activeNoteId, createNote, updateNote, settings } = useApp();
+  const t = useT();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
@@ -97,7 +99,7 @@ export function Home() {
   return (
     <div className="app-root">
       <div className="app-menubar">
-        <span className="app-title">Notlar</span>
+        <span className="app-title">{t('app.title')}</span>
         <div className="app-actions">
           <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
 
@@ -116,40 +118,40 @@ export function Home() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                İçe Aktar
+                {t('menu.import')}
               </DropdownMenuLabel>
               <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
                 <FolderOpen className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Dosya Aç
+                {t('menu.open.file')}
                 <span className="ml-auto text-[10px] text-muted-foreground">.txt .md .docx</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                Dışa Aktar
+                {t('menu.export')}
               </DropdownMenuLabel>
 
               <DropdownMenuItem onClick={handleSaveTxt} disabled={!activeNote}>
                 <FileText className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Düz Metin
+                {t('menu.save.txt')}
                 <span className="ml-auto text-[10px] text-muted-foreground">.txt</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={handleSaveMd} disabled={!activeNote}>
                 <Download className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Markdown
+                {t('menu.save.md')}
                 <span className="ml-auto text-[10px] text-muted-foreground">.md</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={handleSaveDocx} disabled={!activeNote}>
                 <FileDown className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Word Belgesi
+                {t('menu.save.docx')}
                 <span className="ml-auto text-[10px] text-muted-foreground">.docx</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                Paylaş & Yazdır
+                {t('menu.share.section')}
               </DropdownMenuLabel>
 
               <DropdownMenuItem onClick={handleShare} disabled={!activeNote}>
@@ -157,17 +159,17 @@ export function Home() {
                   ? <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
                   : <Link className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
                 }
-                {shareCopied ? 'Bağlantı kopyalandı!' : 'Bağlantı kopyala'}
+                {shareCopied ? t('menu.link.copied') : t('menu.copy.link')}
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => setShowPrintPreview(true)} disabled={!activeNote}>
                 <Eye className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Baskı önizleme
+                {t('menu.print.preview')}
               </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => window.print()} disabled={!activeNote}>
                 <Printer className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Yazdır / PDF
+                {t('menu.print.pdf')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -215,10 +217,10 @@ export function Home() {
           <div className="app-empty-state">
             <p>
               {filterTag
-                ? `"#${filterTag}" etiketli not bulunamadı.`
+                ? t('note.filter.none', { tag: filterTag })
                 : notes.length === 0
-                  ? 'Yeni not oluşturmak için + butonuna tıklayın.'
-                  : 'Bir sekme seçin veya yeni not oluşturun.'}
+                  ? t('note.empty.new')
+                  : t('note.select')}
             </p>
           </div>
         )}

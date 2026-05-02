@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -20,10 +21,10 @@ const THEMES: { id: AppTheme; label: string; bg: string; fg: string; page: strin
   { id: 'green-black',  label: 'Terminal',    bg: '#0a0a0a', fg: '#3ddc6a', page: '#111111' },
 ];
 
-const MARGIN_PRESETS = [
-  { label: 'Dar',    top: 48,  bottom: 72,  left: 48,  right: 48  },
-  { label: 'Normal', top: 80,  bottom: 120, left: 80,  right: 80  },
-  { label: 'Geniş',  top: 120, bottom: 140, left: 128, right: 128 },
+const MARGIN_PRESETS_DATA = [
+  { key: 'narrow' as const, top: 48,  bottom: 72,  left: 48,  right: 48  },
+  { key: 'normal' as const, top: 80,  bottom: 120, left: 80,  right: 80  },
+  { key: 'wide'   as const, top: 120, bottom: 140, left: 128, right: 128 },
 ];
 
 type ProviderStatus = 'idle' | 'loading' | 'ok' | 'error';
@@ -47,6 +48,7 @@ function ProviderBlock({
   label, apiKey, model, models, status, errorMsg, isActive,
   onSetActive, onChangeKey, onFetch, onSelectModel,
 }: ProviderBlockProps) {
+  const t = useT();
   return (
     <div
       className={`rounded-lg border p-4 space-y-3 cursor-pointer transition-all ${
@@ -60,13 +62,13 @@ function ProviderBlock({
         <span className="text-sm font-semibold">{label}</span>
         {isActive && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
-            Aktif
+            {t('settings.active')}
           </span>
         )}
       </div>
 
       <div className="grid gap-1.5" onClick={e => e.stopPropagation()}>
-        <Label className="text-xs text-muted-foreground">API Anahtarı</Label>
+        <Label className="text-xs text-muted-foreground">{t('settings.api.key')}</Label>
         <Input
           type="password"
           value={apiKey}
@@ -102,18 +104,18 @@ function ProviderBlock({
         >
           {status === 'loading'
             ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-            : 'Getir'}
+            : t('settings.fetch')}
         </Button>
       </div>
 
       {status === 'ok' && (
         <p className="text-[11px] text-green-600 flex items-center gap-1">
-          <CheckCircle2 className="h-3 w-3" /> {models.length} model yüklendi
+          <CheckCircle2 className="h-3 w-3" /> {t('settings.models.loaded', { n: models.length })}
         </p>
       )}
       {status === 'error' && (
         <p className="text-[11px] text-destructive flex items-center gap-1 break-all">
-          <AlertCircle className="h-3 w-3 shrink-0" /> {errorMsg || 'Bağlantı başarısız'}
+          <AlertCircle className="h-3 w-3 shrink-0" /> {errorMsg || t('settings.conn.fail')}
         </p>
       )}
     </div>
@@ -122,6 +124,7 @@ function ProviderBlock({
 
 export function SettingsDialog() {
   const { settings, updateSettings } = useApp();
+  const t = useT();
   const [orModels, setOrModels] = useState<{ id: string; name: string }[]>([]);
   const [nvModels, setNvModels] = useState<{ id: string; name: string }[]>([]);
   const [orStatus, setOrStatus] = useState<ProviderStatus>('idle');
@@ -170,14 +173,14 @@ export function SettingsDialog() {
 
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
-          <DialogTitle>Ayarlar</DialogTitle>
+          <DialogTitle>{t('settings.title')}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="ai" className="flex flex-col flex-1 min-h-0">
           <TabsList className="mx-5 mb-1 shrink-0 grid grid-cols-3">
-            <TabsTrigger value="ai">AI</TabsTrigger>
-            <TabsTrigger value="appearance">Görünüm</TabsTrigger>
-            <TabsTrigger value="page">Sayfa</TabsTrigger>
+            <TabsTrigger value="ai">{t('settings.tab.ai')}</TabsTrigger>
+            <TabsTrigger value="appearance">{t('settings.tab.appearance')}</TabsTrigger>
+            <TabsTrigger value="page">{t('settings.tab.page')}</TabsTrigger>
           </TabsList>
 
           {/* ── AI tab ── */}
@@ -186,7 +189,7 @@ export function SettingsDialog() {
             className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-3 settings-scroll"
           >
             <p className="text-xs text-muted-foreground">
-              Her sağlayıcı için ayrı ayrı API anahtarı girebilirsin. Aktif olan AI Düzelt butonunda kullanılır.
+              {t('settings.ai.desc')}
             </p>
             <ProviderBlock
               id="openrouter"
@@ -224,7 +227,7 @@ export function SettingsDialog() {
             className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 settings-scroll"
           >
             <div className="space-y-3">
-              <h3 className="font-medium text-sm border-b pb-2">Arayüz Dili / Interface Language</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.language')}</h3>
               <div className="flex gap-2">
                 {(['tr', 'en'] as const).map(lang => (
                   <button
@@ -243,30 +246,30 @@ export function SettingsDialog() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-medium text-sm border-b pb-2">Tema</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.theme')}</h3>
               <div className="grid grid-cols-3 gap-2">
-                {THEMES.map(t => (
+                {THEMES.map(theme => (
                   <button
-                    key={t.id}
-                    onClick={() => updateSettings({ theme: t.id })}
+                    key={theme.id}
+                    onClick={() => updateSettings({ theme: theme.id })}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all ${
-                      settings.theme === t.id
+                      settings.theme === theme.id
                         ? 'border-primary shadow-md scale-[1.03]'
                         : 'border-border hover:border-muted-foreground'
                     }`}
                   >
-                    <div className="h-14 flex flex-col" style={{ background: t.bg }}>
-                      <div className="h-3 w-full" style={{ borderBottom: `1px solid ${t.fg}22` }} />
-                      <div className="flex-1 mx-2 my-1 rounded-sm flex flex-col gap-[3px] px-1.5 pt-1" style={{ background: t.page }}>
-                        <div className="h-[3px] rounded-full w-3/4" style={{ background: t.fg, opacity: 0.7 }} />
-                        <div className="h-[3px] rounded-full w-full" style={{ background: t.fg, opacity: 0.4 }} />
-                        <div className="h-[3px] rounded-full w-5/6" style={{ background: t.fg, opacity: 0.4 }} />
+                    <div className="h-14 flex flex-col" style={{ background: theme.bg }}>
+                      <div className="h-3 w-full" style={{ borderBottom: `1px solid ${theme.fg}22` }} />
+                      <div className="flex-1 mx-2 my-1 rounded-sm flex flex-col gap-[3px] px-1.5 pt-1" style={{ background: theme.page }}>
+                        <div className="h-[3px] rounded-full w-3/4" style={{ background: theme.fg, opacity: 0.7 }} />
+                        <div className="h-[3px] rounded-full w-full" style={{ background: theme.fg, opacity: 0.4 }} />
+                        <div className="h-[3px] rounded-full w-5/6" style={{ background: theme.fg, opacity: 0.4 }} />
                       </div>
                     </div>
-                    <div className="text-[10px] font-medium py-1 text-center" style={{ background: t.bg, color: t.fg }}>
-                      {t.label}
+                    <div className="text-[10px] font-medium py-1 text-center" style={{ background: theme.bg, color: theme.fg }}>
+                      {theme.label}
                     </div>
-                    {settings.theme === t.id && (
+                    {settings.theme === theme.id && (
                       <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
                         <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
                           <path d="M1 3l2 2 4-4" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
@@ -285,21 +288,22 @@ export function SettingsDialog() {
             className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 settings-scroll"
           >
             <div className="space-y-3">
-              <h3 className="font-medium text-sm border-b pb-2">Kenar Boşlukları</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.margins')}</h3>
               <div className="flex gap-2">
-                {MARGIN_PRESETS.map(p => {
+                {MARGIN_PRESETS_DATA.map(p => {
                   const active =
                     settings.marginTop === p.top && settings.marginBottom === p.bottom &&
                     settings.marginLeft === p.left && settings.marginRight === p.right;
+                  const labelKey = `settings.margin.${p.key}` as const;
                   return (
                     <button
-                      key={p.label}
+                      key={p.key}
                       onClick={() => updateSettings({ marginTop: p.top, marginBottom: p.bottom, marginLeft: p.left, marginRight: p.right })}
                       className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
                         active ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent'
                       }`}
                     >
-                      {p.label}
+                      {t(labelKey)}
                     </button>
                   );
                 })}
@@ -307,14 +311,14 @@ export function SettingsDialog() {
               <div className="grid grid-cols-2 gap-3">
                 {(
                   [
-                    { key: 'marginTop' as const,    label: 'Üst' },
-                    { key: 'marginBottom' as const, label: 'Alt' },
-                    { key: 'marginLeft' as const,   label: 'Sol' },
-                    { key: 'marginRight' as const,  label: 'Sağ' },
+                    { key: 'marginTop' as const,    labelKey: 'settings.margin.top' as const },
+                    { key: 'marginBottom' as const, labelKey: 'settings.margin.bottom' as const },
+                    { key: 'marginLeft' as const,   labelKey: 'settings.margin.left' as const },
+                    { key: 'marginRight' as const,  labelKey: 'settings.margin.right' as const },
                   ]
-                ).map(({ key, label }) => (
+                ).map(({ key, labelKey }) => (
                   <div key={key} className="grid gap-1">
-                    <Label className="text-xs text-muted-foreground">{label} (px)</Label>
+                    <Label className="text-xs text-muted-foreground">{t(labelKey)} (px)</Label>
                     <Input
                       type="number" min={0} max={300} step={8}
                       value={marginVal(key)}
@@ -327,7 +331,7 @@ export function SettingsDialog() {
             </div>
 
             <div className="space-y-3">
-              <h3 className="font-medium text-sm border-b pb-2">Sayfa Deseni</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.bg.pattern')}</h3>
               <RadioGroup
                 value={settings.backgroundPattern}
                 onValueChange={(val: 'none' | 'lines' | 'grid') => updateSettings({ backgroundPattern: val })}
@@ -337,7 +341,7 @@ export function SettingsDialog() {
                   <div key={v} className="flex items-center space-x-2">
                     <RadioGroupItem value={v} id={`pat-${v}`} />
                     <Label htmlFor={`pat-${v}`} className="text-sm">
-                      {v === 'none' ? 'Yok' : v === 'lines' ? 'Çizgili' : 'Kareli'}
+                      {v === 'none' ? t('settings.bg.none') : v === 'lines' ? t('settings.bg.lines') : t('settings.bg.grid')}
                     </Label>
                   </div>
                 ))}

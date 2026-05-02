@@ -14,6 +14,7 @@ import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table
 import { Link } from '@tiptap/extension-link';
 import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
 import { FloatingImage as FloatingImageComponent } from '../floating-image';
@@ -107,7 +108,8 @@ function PageOverlays({
   const count = Math.max(1, Math.ceil(totalH / (PAGE_H + SEP_H)));
   const nodes: React.ReactNode[] = [];
 
-  nodes.push(<div key="p1" className="page-first-label">Sayfa 1</div>);
+  const t = useT();
+  nodes.push(<div key="p1" className="page-first-label">{t('page.first')}</div>);
 
   if (showBorder) {
     nodes.push(
@@ -124,7 +126,7 @@ function PageOverlays({
     const pageTop  = (PAGE_H + SEP_H) * i;
     nodes.push(
       <div key={`sep-${i}`} className="page-sep-label" style={{ top: labelTop }}>
-        <span className="page-sep-num">Sayfa {i + 1}</span>
+        <span className="page-sep-num">{t('page.num', { n: i + 1 })}</span>
       </div>
     );
     nodes.push(
@@ -170,19 +172,20 @@ function PageOverlays({
 }
 
 function SaveIndicator({ updatedAt }: { updatedAt: string }) {
+  const t = useT();
   const [visible, setVisible] = useState(false);
   const prevRef = useRef(updatedAt);
   useEffect(() => {
     if (updatedAt !== prevRef.current) {
       prevRef.current = updatedAt;
       setVisible(true);
-      const t = setTimeout(() => setVisible(false), 2000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setVisible(false), 2000);
+      return () => clearTimeout(timer);
     }
   }, [updatedAt]);
   return (
     <span className={`save-indicator ${visible ? 'save-indicator-show' : ''}`}>
-      Kaydedildi ✓
+      {t('status.saved')}
     </span>
   );
 }
@@ -193,6 +196,7 @@ function countWords(text: string): number {
 
 export function NoteEditor({ note }: Props) {
   const { updateNote, settings } = useApp();
+  const t = useT();
   const [activeTextboxId, setActiveTextboxId] = useState<string | null>(null);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [showFindReplace, setShowFindReplace] = useState(false);
@@ -565,9 +569,9 @@ export function NoteEditor({ note }: Props) {
       </div>
 
       <div className="editor-statusbar">
-        <span>{wordCount} kelime</span>
+        <span>{t('status.words', { n: wordCount })}</span>
         <span className="mx-2 opacity-40">·</span>
-        <span>{charCount} karakter</span>
+        <span>{t('status.chars', { n: charCount })}</span>
         <SaveIndicator updatedAt={note.updatedAt} />
         <span className="ml-auto opacity-40 text-[10px] tracking-wide">v1.0.0</span>
       </div>
