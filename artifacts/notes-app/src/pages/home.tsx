@@ -34,6 +34,11 @@ export function Home() {
   const [shareCopied, setShareCopied] = useState(false);
   const clipboardHistory = useClipboardHistory();
 
+  useEffect(() => {
+    const base = t('app.title');
+    document.title = activeNote?.title ? `${activeNote.title} — ${base}` : base;
+  }, [settings.language, activeNote?.title]);
+
   const pinnedActions: PinnableActionId[] = settings.pinnedActions ?? [];
 
   const togglePin = (id: PinnableActionId) => {
