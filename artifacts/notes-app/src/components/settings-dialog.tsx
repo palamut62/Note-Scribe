@@ -87,8 +87,8 @@ function ProviderBlock({
               {model && models.length === 0 && (
                 <SelectItem value={model}>{model}</SelectItem>
               )}
-              {models.map(m => (
-                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              {models.map((m, i) => (
+                <SelectItem key={`${m.id}-${i}`} value={m.id}>{m.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

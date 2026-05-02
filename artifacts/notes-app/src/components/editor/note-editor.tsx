@@ -181,7 +181,10 @@ export function NoteEditor({ note }: Props) {
       )}
 
       <div className="editor-scroll" onClick={handlePageClick}>
-        <div className={`editor-page ${bgClass}`}>
+        <div
+          className={`editor-page ${bgClass}`}
+          style={bgClass ? { backgroundPositionY: `${settings.marginTop ?? 80}px` } : undefined}
+        >
           {note.textboxes.map(tb => (
             <FloatingTextbox
               key={tb.id}
