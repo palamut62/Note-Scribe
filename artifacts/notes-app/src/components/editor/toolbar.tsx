@@ -17,6 +17,7 @@ import { useState, useRef } from 'react';
 interface ToolbarProps {
   editor: Editor | null;
   onAddTextbox: () => void;
+  onAddImage: (src: string, alt: string) => void;
   onToggleFindReplace: () => void;
 }
 
@@ -86,7 +87,7 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
   );
 }
 
-export function EditorToolbar({ editor, onAddTextbox, onToggleFindReplace }: ToolbarProps) {
+export function EditorToolbar({ editor, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
   const { settings } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
@@ -136,7 +137,7 @@ export function EditorToolbar({ editor, onAddTextbox, onToggleFindReplace }: Too
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        editor.chain().focus().setImage({ src: reader.result }).run();
+        onAddImage(reader.result, file.name.replace(/\.[^.]+$/, ''));
       }
     };
     reader.readAsDataURL(file);
