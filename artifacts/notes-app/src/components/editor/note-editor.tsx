@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Highlight } from '@tiptap/extension-highlight';
@@ -11,7 +10,6 @@ import TaskItem from '@tiptap/extension-task-item';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
-import { Link } from '@tiptap/extension-link';
 import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
@@ -232,8 +230,10 @@ export function NoteEditor({ note }: Props) {
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-      Underline,
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        link: { openOnClick: false, autolink: true },
+      }),
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
@@ -246,7 +246,6 @@ export function NoteEditor({ note }: Props) {
       TableRow,
       TableHeader,
       TableCell,
-      Link.configure({ openOnClick: false, autolink: true }),
       AutoCorrectExtension.configure({
         getSettings: () => {
           const s = settingsRef.current;
