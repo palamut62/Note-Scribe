@@ -571,9 +571,6 @@
     transparent, transparent 27px,
     var(--pattern-line) 27px, var(--pattern-line) 28px
   );
-  background-origin: content-box;
-  background-clip: content-box;
-  background-attachment: local;
 }
 
 .bg-pattern-grid {
@@ -586,9 +583,14 @@
       90deg, transparent, transparent 27px,
       var(--pattern-line) 27px, var(--pattern-line) 28px
     );
-  background-origin: content-box;
-  background-clip: content-box;
-  background-attachment: local;
+}
+
+.page-pattern-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 0;
 }
 
 /* TipTap Editor Styles */

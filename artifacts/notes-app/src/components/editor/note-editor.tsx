@@ -182,6 +182,15 @@ export function NoteEditor({ note }: Props) {
 
       <div className="editor-scroll" onClick={handlePageClick}>
         <div className="editor-page">
+          {bgClass && (
+            <div
+              className={`page-pattern-overlay ${bgClass}`}
+              style={{
+                top: settings.marginTop ?? 80,
+                bottom: settings.marginBottom ?? 120,
+              }}
+            />
+          )}
           {note.textboxes.map(tb => (
             <FloatingTextbox
               key={tb.id}
@@ -203,7 +212,7 @@ export function NoteEditor({ note }: Props) {
             />
           ))}
           <div
-            className={`editor-content-area ${bgClass}`}
+            className="editor-content-area"
             style={{
               paddingTop: settings.marginTop ?? 80,
               paddingBottom: settings.marginBottom ?? 120,
