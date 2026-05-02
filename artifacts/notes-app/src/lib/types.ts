@@ -22,12 +22,21 @@ export interface FloatingImage {
   alt: string;
 }
 
+export interface HeaderFooter {
+  left: string;
+  center: string;
+  right: string;
+  visible: boolean;
+}
+
 export interface Note {
   id: string;
   title: string;
   content: string;
   textboxes: TextBox[];
   images: FloatingImage[];
+  header: HeaderFooter;
+  footer: HeaderFooter;
   createdAt: string;
   updatedAt: string;
 }

@@ -779,6 +779,135 @@ ul[data-type="taskList"] li > div {
   padding: 0;
 }
 
+/* ─── Header / Footer bar ──────────────────────────────────────────────────── */
+.hf-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 3;
+  box-sizing: border-box;
+  cursor: text;
+}
+
+.hf-bar-header {
+  top: 0;
+  border-bottom: 1px dashed hsl(var(--border) / 0.6);
+}
+
+.hf-bar-footer {
+  bottom: 0;
+  border-top: 1px dashed hsl(var(--border) / 0.6);
+}
+
+.hf-bar:hover {
+  background: hsl(var(--muted) / 0.25);
+}
+
+.hf-zone {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  cursor: text;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.hf-zone-left  { justify-content: flex-start; }
+.hf-zone-center{ justify-content: center; }
+.hf-zone-right { justify-content: flex-end; }
+
+.hf-text {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hf-placeholder {
+  opacity: 0.3;
+  font-size: 11px;
+}
+
+.hf-input {
+  width: 100%;
+  font-size: 11px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--ring));
+  border-radius: 3px;
+  padding: 2px 6px;
+  outline: none;
+  font-family: var(--app-font-sans);
+}
+
+.hf-tokens {
+  display: flex;
+  gap: 3px;
+  padding: 0 6px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.hf-bar:hover .hf-tokens,
+.hf-bar:focus-within .hf-tokens {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hf-token-btn {
+  font-size: 9px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--app-font-mono);
+  line-height: 1.4;
+}
+
+.hf-token-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--primary));
+}
+
+.hf-toggle-btn {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+  border-radius: 3px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--app-font-sans);
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+
+.hf-toggle-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--foreground));
+}
+
+.hf-toggle-active {
+  background: hsl(var(--primary) / 0.12);
+  color: hsl(var(--primary));
+  border-color: hsl(var(--primary) / 0.4);
+}
+
 /* ─── Find & Replace bar ───────────────────────────────────────────────────── */
 .find-replace-bar {
   display: flex;

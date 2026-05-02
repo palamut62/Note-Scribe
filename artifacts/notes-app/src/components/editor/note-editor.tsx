@@ -12,12 +12,13 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
-import { Note, TextBox, FloatingImage } from '@/lib/types';
+import { Note, TextBox, FloatingImage, HeaderFooter } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
 import { FloatingImage as FloatingImageComponent } from '../floating-image';
 import { FindReplace } from './find-replace';
+import { HeaderFooterBar } from './header-footer-bar';
 
 interface Props {
   note: Note;
@@ -167,10 +168,14 @@ export function NoteEditor({ note }: Props) {
     setActiveImageId(null);
   };
 
+  const safeHeader: HeaderFooter = note.header ?? { left: '', center: '', right: '', visible: false };
+  const safeFooter: HeaderFooter = note.footer ?? { left: '', center: '{sayfa}', right: '', visible: false };
+
   return (
     <div className="editor-shell">
       <EditorToolbar
         editor={editor}
+        note={note}
         onAddTextbox={handleAddTextbox}
         onAddImage={handleAddImage}
         onToggleFindReplace={() => setShowFindReplace(v => !v)}
@@ -213,6 +218,18 @@ export function NoteEditor({ note }: Props) {
               onFocus={() => { setActiveImageId(img.id); setActiveTextboxId(null); }}
             />
           ))}
+          {/* Header */}
+          <HeaderFooterBar
+            data={safeHeader}
+            type="header"
+            noteTitle={note.title}
+            pageNumber={1}
+            marginLeft={settings.marginLeft ?? 80}
+            marginRight={settings.marginRight ?? 80}
+            height={settings.marginTop ?? 80}
+            onChange={u => updateNote(note.id, { header: { ...safeHeader, ...u } })}
+          />
+
           <div
             className="editor-content-area"
             style={{
@@ -224,6 +241,18 @@ export function NoteEditor({ note }: Props) {
           >
             <EditorContent editor={editor} />
           </div>
+
+          {/* Footer */}
+          <HeaderFooterBar
+            data={safeFooter}
+            type="footer"
+            noteTitle={note.title}
+            pageNumber={1}
+            marginLeft={settings.marginLeft ?? 80}
+            marginRight={settings.marginRight ?? 80}
+            height={settings.marginBottom ?? 120}
+            onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
+          />
         </div>
       </div>
 

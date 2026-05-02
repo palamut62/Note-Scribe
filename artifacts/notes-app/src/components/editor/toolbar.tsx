@@ -5,7 +5,7 @@ import {
   List, ListOrdered, CheckSquare,
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
-  Quote, Minus,
+  Quote, Minus, CalendarDays, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,9 +13,12 @@ import { useApp } from '@/lib/app-state';
 import { fixText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
+import { Note, HeaderFooter } from '@/lib/types';
+import { HeaderFooterToggle } from './header-footer-bar';
 
 interface ToolbarProps {
   editor: Editor | null;
+  note: Note;
   onAddTextbox: () => void;
   onAddImage: (src: string, alt: string) => void;
   onToggleFindReplace: () => void;
@@ -87,13 +90,23 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
   );
 }
 
-export function EditorToolbar({ editor, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
-  const { settings } = useApp();
+export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
+  const { settings, updateNote } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
+
+  const safeHeader: HeaderFooter = note.header ?? { left: '', center: '', right: '', visible: false };
+  const safeFooter: HeaderFooter = note.footer ?? { left: '', center: '{sayfa}', right: '', visible: false };
+
+  const handleInsertDate = () => {
+    const today = new Date().toLocaleDateString('tr-TR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+    editor.chain().focus().insertContent(today).run();
+  };
 
   const handleFixText = async () => {
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
@@ -303,6 +316,22 @@ export function EditorToolbar({ editor, onAddTextbox, onAddImage, onToggleFindRe
         <Button variant="ghost" size="icon" className="tbtn" onClick={onAddTextbox} title="Metin kutusu ekle">
           <Square className="h-3.5 w-3.5" />
         </Button>
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Tarih ekle">
+          <CalendarDays className="h-3.5 w-3.5" />
+        </Button>
+
+        <Divider />
+
+        <HeaderFooterToggle
+          data={safeHeader}
+          type="header"
+          onChange={u => updateNote(note.id, { header: { ...safeHeader, ...u } })}
+        />
+        <HeaderFooterToggle
+          data={safeFooter}
+          type="footer"
+          onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
+        />
 
         <Divider />
 
