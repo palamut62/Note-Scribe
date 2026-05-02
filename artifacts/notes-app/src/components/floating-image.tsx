@@ -59,7 +59,7 @@ export function FloatingImage({ image, onChange, onDelete, isActive, onFocus }: 
       resizeHandleStyles={isActive ? resizeHandleStyles : hiddenHandleStyles}
       className="absolute z-20 group select-none"
       style={{ overflow: 'visible' }}
-      onClick={onFocus}
+      onClick={e => { e.stopPropagation(); onFocus(); }}
     >
       {/* Image + overlay wrapper — must NOT clip overflow so handles stick out */}
       <div
