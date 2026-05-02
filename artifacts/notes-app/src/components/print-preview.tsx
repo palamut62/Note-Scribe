@@ -149,11 +149,13 @@ export function PrintPreview({ note, settings, onClose }: Props) {
                   pointerEvents: 'none', zIndex: 0,
                 }}
               />
-              <div style={{
-                position: 'absolute', top: mTop, left: mLeft, right: mRight, bottom: mBottom,
-                border: '1px solid rgba(0,0,0,0.14)',
-                pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
-              }} />
+              {pattern === 'grid' && (
+                <div style={{
+                  position: 'absolute', top: mTop, left: mLeft, right: mRight, bottom: mBottom,
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
+                }} />
+              )}
             </>
           )}
           {/* Header */}
