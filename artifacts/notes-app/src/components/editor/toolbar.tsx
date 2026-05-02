@@ -171,20 +171,51 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
       return;
     }
-    const selection = editor.state.selection;
-    const isTextSelected = !selection.empty;
-    const textToFix = isTextSelected
-      ? editor.state.doc.textBetween(selection.from, selection.to, ' ')
-      : editor.getText();
-    if (!textToFix.trim()) return;
+
+    const { state } = editor;
+    const sel = state.selection;
+    const isTextSelected = !sel.empty;
+
+    // Collect textblocks with position range + first-mark set (preserves bold/italic/font/size/color)
+    type Para = { from: number; to: number; text: string; marks: ReturnType<typeof state.schema.text>['marks'] };
+    const paragraphs: Para[] = [];
+
+    const collectNode = (node: any, pos: number) => {
+      if (!node.isTextblock) return;
+      const from = pos + 1;
+      const to   = pos + node.nodeSize - 1;
+      if (from >= to) return;
+      const text = node.textContent;
+      if (!text.trim()) return;
+      // Collect marks from every text child to preserve inline styles
+      const marks: any[] = [];
+      node.forEach((child: any) => { if (child.isText && marks.length === 0) marks.push(...child.marks); });
+      paragraphs.push({ from, to, text, marks });
+    };
+
+    if (isTextSelected) {
+      state.doc.nodesBetween(sel.from, sel.to, collectNode);
+    } else {
+      state.doc.descendants(collectNode);
+    }
+
+    if (!paragraphs.length) return;
     setIsFixing(true);
     try {
-      const fixedText = await fixText(textToFix, settings.provider, apiKey, model);
-      if (isTextSelected) {
-        editor.commands.insertContentAt({ from: selection.from, to: selection.to }, fixedText);
-      } else {
-        editor.commands.setContent(fixedText);
+      const allText   = paragraphs.map(p => p.text).join('\n');
+      const fixedAll  = await fixText(allText, settings.provider, apiKey, model);
+      const fixedLines = fixedAll.split('\n');
+
+      // Build a single transaction processing in REVERSE to keep positions valid
+      const tr = state.tr;
+      for (let i = paragraphs.length - 1; i >= 0; i--) {
+        const { from, to, marks } = paragraphs[i];
+        const fixedContent = (fixedLines[i] ?? '').trim();
+        if (!fixedContent) continue;
+        const textNode = state.schema.text(fixedContent, marks);
+        tr.replaceWith(from, to, textNode);
       }
+      editor.view.dispatch(tr);
       toast({ title: 'Fixed', description: 'AI successfully fixed the text.' });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Could not fix text', variant: 'destructive' });
@@ -264,7 +295,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           }
         });
         // Also check marks at current cursor position (overrides if set)
-        const clamped = Math.min(state.selection.from, stateForFont.doc.content.size - 1);
+        const clamped = Math.min(stateForFont.selection.from, stateForFont.doc.content.size - 1);
         if (clamped > 0) {
           for (const mark of stateForFont.doc.resolve(clamped).marks()) {
             if (mark.type.name === 'textStyle') {
