@@ -8,8 +8,16 @@ import { TagBar } from '@/components/tag-bar';
 import { ClipboardHistoryBtn, useClipboardHistory } from '@/components/clipboard-history';
 import { Button } from '@/components/ui/button';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import {
   Download, FileText, Printer, FolderOpen, Eye,
-  FileDown, Link, Filter,
+  FileDown, Link, Filter, MoreHorizontal, Check,
 } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
 import mammoth from 'mammoth';
@@ -91,83 +99,86 @@ export function Home() {
       <div className="app-menubar">
         <span className="app-title">Notlar</span>
         <div className="app-actions">
-          <Button
-            variant="ghost" size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            title="Dosya Aç"
-          >
-            <FolderOpen className="h-3.5 w-3.5 mr-1" />Aç
-          </Button>
           <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
-
-          <Button
-            variant="ghost" size="sm"
-            onClick={handleSaveTxt}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-          >
-            <FileText className="h-3.5 w-3.5 mr-1" />.txt
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            onClick={handleSaveMd}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-          >
-            <Download className="h-3.5 w-3.5 mr-1" />.md
-          </Button>
-          <Button
-            variant="ghost" size="sm"
-            onClick={handleSaveDocx}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            title="Word belgesi olarak indir"
-          >
-            <FileDown className="h-3.5 w-3.5 mr-1" />.docx
-          </Button>
-
-          <Button
-            variant="ghost" size="sm"
-            onClick={handleShare}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            title="Not bağlantısını kopyala"
-          >
-            <Link className="h-3.5 w-3.5 mr-1" />
-            {shareCopied ? 'Kopyalandı!' : 'Paylaş'}
-          </Button>
-
-          <Button
-            variant="ghost" size="sm"
-            onClick={() => setShowPrintPreview(true)}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            title="Baskı önizleme"
-          >
-            <Eye className="h-3.5 w-3.5 mr-1" />Önizle
-          </Button>
-
-          <Button
-            variant="ghost" size="sm"
-            onClick={() => window.print()}
-            disabled={!activeNote}
-            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            title="Yazdır / PDF olarak kaydet"
-          >
-            <Printer className="h-3.5 w-3.5 mr-1" />PDF
-          </Button>
 
           <ClipboardHistoryBtn history={clipboardHistory} />
 
-          <div className="w-px h-4 bg-border mx-1" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                title="Dosya işlemleri"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
+                İçe Aktar
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                <FolderOpen className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Dosya Aç
+                <span className="ml-auto text-[10px] text-muted-foreground">.txt .md .docx</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
+                Dışa Aktar
+              </DropdownMenuLabel>
+
+              <DropdownMenuItem onClick={handleSaveTxt} disabled={!activeNote}>
+                <FileText className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Düz Metin
+                <span className="ml-auto text-[10px] text-muted-foreground">.txt</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={handleSaveMd} disabled={!activeNote}>
+                <Download className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Markdown
+                <span className="ml-auto text-[10px] text-muted-foreground">.md</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={handleSaveDocx} disabled={!activeNote}>
+                <FileDown className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Word Belgesi
+                <span className="ml-auto text-[10px] text-muted-foreground">.docx</span>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
+                Paylaş & Yazdır
+              </DropdownMenuLabel>
+
+              <DropdownMenuItem onClick={handleShare} disabled={!activeNote}>
+                {shareCopied
+                  ? <Check className="h-3.5 w-3.5 mr-2 text-green-500" />
+                  : <Link className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                }
+                {shareCopied ? 'Bağlantı kopyalandı!' : 'Bağlantı kopyala'}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => setShowPrintPreview(true)} disabled={!activeNote}>
+                <Eye className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Baskı önizleme
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => window.print()} disabled={!activeNote}>
+                <Printer className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Yazdır / PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="w-px h-4 bg-border mx-0.5" />
           <SettingsDialog />
         </div>
       </div>
 
       <TabBar />
 
-      {/* Tag bar — tag filter + active note tags */}
       {(allTags.length > 0 || activeNote) && (
         <div className="global-tag-bar">
           {allTags.length > 0 && (
