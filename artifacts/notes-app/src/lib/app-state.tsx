@@ -27,6 +27,7 @@ const defaultSettings: Settings = {
   marginLeft: 80,
   marginRight: 80,
   autoCorrect: false,
+  language: 'tr',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -37,7 +38,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('notlar-notes');
       if (!saved) return [];
       const parsed: Note[] = JSON.parse(saved);
-      return parsed.map(n => ({ tags: [], ...n }));
+      return parsed.map(n => ({ tags: [], drawOps: [], ...n }));
     } catch {
       return [];
     }
@@ -79,6 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content: initial?.content || '',
       textboxes: [],
       images: [],
+      drawOps: [],
       tags: initial?.tags ?? [],
       header: { left: { text: '' }, center: { text: '' }, right: { text: '' }, visible: false },
       footer: { left: { text: '' }, center: { text: '{sayfa}' }, right: { text: '' }, visible: false },

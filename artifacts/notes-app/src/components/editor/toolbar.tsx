@@ -5,7 +5,7 @@ import {
   List, ListOrdered, CheckSquare,
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
-  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages,
+  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages, Pencil,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,6 +19,8 @@ import { HeaderFooterToggle } from './header-footer-bar';
 interface ToolbarProps {
   editor: Editor | null;
   note: Note;
+  drawMode: boolean;
+  onToggleDrawMode: () => void;
   onAddTextbox: () => void;
   onAddImage: (src: string, alt: string) => void;
   onToggleFindReplace: () => void;
@@ -90,7 +92,7 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
   );
 }
 
-export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
+export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
   const { settings, updateNote, updateSettings } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
@@ -494,6 +496,19 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
 
         <Button variant="ghost" size="icon" className="tbtn" onClick={onToggleFindReplace} title="Bul & Değiştir (Ctrl+F)">
           <Search className="h-3.5 w-3.5" />
+        </Button>
+
+        <Divider />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-7 text-xs gap-1 px-2 ${drawMode ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30' : 'text-muted-foreground'}`}
+          onClick={onToggleDrawMode}
+          title="Çizim modunu aç/kapat"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          <span>Çiz</span>
         </Button>
 
         <div className="flex-1" />

@@ -1921,4 +1921,167 @@ ul[data-type="taskList"] li > div {
   flex-shrink: 0;
 }
 
+/* ─── Drawing Toolbar ───────────────────────────────────────────────────────── */
+.drawing-toolbar {
+  position: fixed;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 200;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: 0 8px 32px hsl(0 0% 0% / 0.18), 0 2px 8px hsl(0 0% 0% / 0.08);
+  padding: 10px;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  user-select: none;
+}
+
+.drawing-tb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid hsl(var(--border) / 0.5);
+}
+
+.drawing-tb-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+}
+
+.drawing-tb-exit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  cursor: pointer;
+  color: hsl(var(--muted-foreground));
+  flex-shrink: 0;
+}
+.drawing-tb-exit:hover { background: hsl(var(--destructive) / 0.1); color: hsl(var(--destructive)); }
+
+.drawing-tb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.drawing-tb-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+  font-weight: 600;
+}
+
+.drawing-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+}
+
+.drawing-tool-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.drawing-tool-btn:hover { background: hsl(var(--accent)); color: hsl(var(--foreground)); }
+.drawing-tool-active {
+  background: hsl(var(--primary) / 0.12) !important;
+  border-color: hsl(var(--primary) / 0.5) !important;
+  color: hsl(var(--primary)) !important;
+}
+
+.drawing-colors-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+}
+
+.drawing-color-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+.drawing-color-btn:hover { transform: scale(1.15); }
+.drawing-color-active { border-color: hsl(var(--primary)) !important; transform: scale(1.15); }
+
+.drawing-color-picker {
+  width: 100%;
+  height: 26px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 1px;
+}
+
+.drawing-widths {
+  display: flex;
+  gap: 4px;
+}
+
+.drawing-width-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  cursor: pointer;
+  padding: 0 6px;
+  transition: background 0.1s;
+}
+.drawing-width-btn:hover { background: hsl(var(--accent)); }
+.drawing-width-active { border-color: hsl(var(--primary) / 0.5) !important; background: hsl(var(--primary) / 0.08) !important; }
+
+.drawing-tb-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid hsl(var(--border) / 0.5);
+}
+
+.drawing-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border));
+  background: transparent;
+  color: hsl(var(--foreground));
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.drawing-action-btn:hover { background: hsl(var(--accent)); }
+.drawing-action-danger { color: hsl(var(--destructive)); }
+.drawing-action-danger:hover { background: hsl(var(--destructive) / 0.1); }
+
 /* ─── Print / PDF ──────────────────────────────────────────────────────────── */

@@ -12,7 +12,7 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
-import { Note, TextBox, FloatingImage, HeaderFooter, HFZone } from '@/lib/types';
+import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
@@ -20,6 +20,8 @@ import { FloatingImage as FloatingImageComponent } from '../floating-image';
 import { FindReplace } from './find-replace';
 import { HeaderFooterBar } from './header-footer-bar';
 import { AutoCorrectExtension } from './auto-correct-extension';
+import { DrawingCanvas, DrawingCanvasHandle } from '@/components/drawing/drawing-canvas';
+import { DrawingToolbar } from '@/components/drawing/drawing-toolbar';
 
 interface Props {
   note: Note;
@@ -196,6 +198,11 @@ export function NoteEditor({ note }: Props) {
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
+  const [drawMode, setDrawMode] = useState(false);
+  const [drawTool, setDrawTool] = useState<DrawTool>('pen');
+  const [drawColor, setDrawColor] = useState('#e11d48');
+  const [drawWidth, setDrawWidth] = useState(3);
+  const drawCanvasRef = useRef<DrawingCanvasHandle>(null);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -366,6 +373,8 @@ export function NoteEditor({ note }: Props) {
       <EditorToolbar
         editor={editor}
         note={note}
+        drawMode={drawMode}
+        onToggleDrawMode={() => setDrawMode(v => !v)}
         onAddTextbox={handleAddTextbox}
         onAddImage={handleAddImage}
         onToggleFindReplace={() => setShowFindReplace(v => !v)}
@@ -375,8 +384,36 @@ export function NoteEditor({ note }: Props) {
         <FindReplace editor={editor} onClose={() => setShowFindReplace(false)} />
       )}
 
-      <div className="editor-scroll" onClick={handlePageClick}>
+      {drawMode && (
+        <DrawingToolbar
+          tool={drawTool}
+          color={drawColor}
+          strokeWidth={drawWidth}
+          language={settings.language ?? 'tr'}
+          onToolChange={setDrawTool}
+          onColorChange={setDrawColor}
+          onWidthChange={setDrawWidth}
+          onUndo={() => drawCanvasRef.current?.undo()}
+          onClear={() => drawCanvasRef.current?.clear()}
+          onExit={() => setDrawMode(false)}
+        />
+      )}
+
+      <div
+        className="editor-scroll"
+        onClick={drawMode ? undefined : handlePageClick}
+        style={{ cursor: drawMode ? 'default' : undefined }}
+      >
         <div className="editor-page" ref={pageRef}>
+          <DrawingCanvas
+            ref={drawCanvasRef}
+            ops={note.drawOps ?? []}
+            onOpsChange={ops => updateNote(note.id, { drawOps: ops })}
+            tool={drawTool}
+            color={drawColor}
+            strokeWidth={drawWidth}
+            active={drawMode}
+          />
           <PageOverlays
             pageRef={pageRef}
             header={safeHeader}
@@ -439,6 +476,7 @@ export function NoteEditor({ note }: Props) {
               paddingBottom: settings.marginBottom ?? 120,
               paddingLeft: settings.marginLeft ?? 80,
               paddingRight: settings.marginRight ?? 80,
+              pointerEvents: drawMode ? 'none' : undefined,
             }}
           >
             <EditorContent editor={editor} />

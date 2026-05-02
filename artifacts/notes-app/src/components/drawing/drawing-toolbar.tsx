@@ -1,0 +1,131 @@
+import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X } from 'lucide-react';
+import type { DrawTool, Language } from '@/lib/types';
+import { makeT } from '@/lib/i18n';
+
+interface Props {
+  tool: DrawTool;
+  color: string;
+  strokeWidth: number;
+  language: Language;
+  onToolChange: (t: DrawTool) => void;
+  onColorChange: (c: string) => void;
+  onWidthChange: (w: number) => void;
+  onUndo: () => void;
+  onClear: () => void;
+  onExit: () => void;
+}
+
+const DRAW_COLORS = [
+  '#e11d48', '#f97316', '#eab308', '#16a34a',
+  '#2563eb', '#7c3aed', '#000000', '#6b7280',
+  '#ffffff', '#f9a8d4', '#bbf7d0', '#bfdbfe',
+];
+
+export function DrawingToolbar({
+  tool, color, strokeWidth, language,
+  onToolChange, onColorChange, onWidthChange,
+  onUndo, onClear, onExit,
+}: Props) {
+  const t = makeT(language);
+
+  const tools: { id: DrawTool; icon: React.ReactNode; key: Parameters<typeof t>[0] }[] = [
+    { id: 'pen',       icon: <Pencil      size={13} />, key: 'draw.pen'       },
+    { id: 'highlight', icon: <Highlighter size={13} />, key: 'draw.highlight' },
+    { id: 'line',      icon: <Minus       size={13} />, key: 'draw.line'      },
+    { id: 'arrow',     icon: <ArrowRight  size={13} />, key: 'draw.arrow'     },
+    { id: 'rect',      icon: <Square      size={13} />, key: 'draw.rect'      },
+    { id: 'ellipse',   icon: <Circle      size={13} />, key: 'draw.ellipse'   },
+    { id: 'eraser',    icon: <Eraser      size={13} />, key: 'draw.eraser'    },
+  ];
+
+  const widths: { value: number; key: Parameters<typeof t>[0] }[] = [
+    { value: 1.5, key: 'draw.thin'   },
+    { value: 3,   key: 'draw.medium' },
+    { value: 6,   key: 'draw.thick'  },
+  ];
+
+  return (
+    <div className="drawing-toolbar">
+      <div className="drawing-tb-header">
+        <span className="drawing-tb-title">✏️ {t('draw.mode')}</span>
+        <button className="drawing-tb-exit" onClick={onExit} title={t('draw.exit')}>
+          <X size={12} />
+        </button>
+      </div>
+
+      <div className="drawing-tb-section">
+        <div className="drawing-tb-label">{t('draw.tool')}</div>
+        <div className="drawing-tools-grid">
+          {tools.map(item => (
+            <button
+              key={item.id}
+              className={`drawing-tool-btn${tool === item.id ? ' drawing-tool-active' : ''}`}
+              onClick={() => onToolChange(item.id)}
+              title={t(item.key)}
+            >
+              {item.icon}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="drawing-tb-section">
+        <div className="drawing-tb-label">{t('draw.color')}</div>
+        <div className="drawing-colors-grid">
+          {DRAW_COLORS.map(c => (
+            <button
+              key={c}
+              className={`drawing-color-btn${color === c ? ' drawing-color-active' : ''}`}
+              style={{
+                background: c,
+                border: c === '#ffffff' ? '1px solid #ccc' : undefined,
+              }}
+              onClick={() => onColorChange(c)}
+            />
+          ))}
+        </div>
+        <input
+          type="color"
+          value={color}
+          onChange={e => onColorChange(e.target.value)}
+          className="drawing-color-picker"
+        />
+      </div>
+
+      <div className="drawing-tb-section">
+        <div className="drawing-tb-label">{t('draw.width')}</div>
+        <div className="drawing-widths">
+          {widths.map(w => (
+            <button
+              key={w.value}
+              className={`drawing-width-btn${strokeWidth === w.value ? ' drawing-width-active' : ''}`}
+              onClick={() => onWidthChange(w.value)}
+              title={t(w.key)}
+            >
+              <span
+                style={{
+                  display: 'block',
+                  height: Math.max(1.5, w.value * 1.2),
+                  background: color,
+                  borderRadius: 99,
+                  width: '100%',
+                }}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="drawing-tb-actions">
+        <button className="drawing-action-btn" onClick={onUndo}>
+          <Undo2 size={12} />
+          {t('draw.undo')}
+        </button>
+        <button className="drawing-action-btn drawing-action-danger" onClick={onClear}>
+          <Trash2 size={12} />
+          {t('draw.clear')}
+        </button>
+      </div>
+    </div>
+  );
+}

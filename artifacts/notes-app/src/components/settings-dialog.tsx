@@ -224,6 +224,25 @@ export function SettingsDialog() {
             className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 settings-scroll"
           >
             <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">Arayüz Dili / Interface Language</h3>
+              <div className="flex gap-2">
+                {(['tr', 'en'] as const).map(lang => (
+                  <button
+                    key={lang}
+                    onClick={() => updateSettings({ language: lang })}
+                    className={`flex-1 py-2 text-xs rounded-lg border transition-colors ${
+                      (settings.language ?? 'tr') === lang
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    {lang === 'tr' ? '🇹🇷 Türkçe' : '🇬🇧 English'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
               <h3 className="font-medium text-sm border-b pb-2">Tema</h3>
               <div className="grid grid-cols-3 gap-2">
                 {THEMES.map(t => (
