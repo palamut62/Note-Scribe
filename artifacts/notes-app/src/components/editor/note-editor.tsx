@@ -431,6 +431,7 @@ export function NoteEditor({ note }: Props) {
         <span>{wordCount} kelime</span>
         <span className="mx-2 opacity-40">·</span>
         <span>{charCount} karakter</span>
+        <span className="ml-auto opacity-40 text-[10px] tracking-wide">v1.0.0</span>
       </div>
     </div>
   );
