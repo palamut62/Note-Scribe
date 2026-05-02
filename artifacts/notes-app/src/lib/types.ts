@@ -26,6 +26,7 @@ export interface HFZone {
   text: string;
   image?: string;
   imageHeight?: number;
+  align?: 'left' | 'center' | 'right';
 }
 
 export interface HeaderFooter {

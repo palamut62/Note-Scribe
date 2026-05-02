@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { HFZone, HeaderFooter } from '@/lib/types';
-import { Image as ImageIcon, Type, Hash, Calendar, FileText, X, Upload, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Type, Hash, Calendar, FileText, X, Upload, ChevronUp, ChevronDown,
+  AlignLeft, AlignCenter, AlignRight,
+} from 'lucide-react';
 
 interface Props {
   data: HeaderFooter;
@@ -19,6 +22,12 @@ const TOKENS = [
   { label: '{başlık}', title: 'Not başlığı', icon: FileText },
 ];
 
+const ALIGN_OPTS: { value: 'left' | 'center' | 'right'; icon: typeof AlignLeft; label: string }[] = [
+  { value: 'left',   icon: AlignLeft,   label: 'Sola hizala' },
+  { value: 'center', icon: AlignCenter, label: 'Ortala' },
+  { value: 'right',  icon: AlignRight,  label: 'Sağa hizala' },
+];
+
 function resolveTokens(text: string, title: string, page: number): string {
   const today = new Date().toLocaleDateString('tr-TR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -35,15 +44,33 @@ function normalizeZone(z: unknown): HFZone {
   return z as HFZone;
 }
 
-function ZoneContent({ zone, noteTitle, pageNumber }: { zone: HFZone; noteTitle: string; pageNumber: number }) {
+/** Default alignment per zone position */
+function defaultAlign(zone: 'left' | 'center' | 'right'): 'left' | 'center' | 'right' {
+  return zone;
+}
+
+function ZoneContent({
+  zone, zonePos, noteTitle, pageNumber,
+}: {
+  zone: HFZone;
+  zonePos: 'left' | 'center' | 'right';
+  noteTitle: string;
+  pageNumber: number;
+}) {
   const imgH = zone.imageHeight ?? 28;
   const hasImage = !!zone.image;
   const hasText = !!zone.text?.trim();
+  const align = zone.align ?? defaultAlign(zonePos);
 
   if (!hasImage && !hasText) return null;
 
+  const justifyMap = { left: 'flex-start', center: 'center', right: 'flex-end' } as const;
+
   return (
-    <div className="hf-zone-content">
+    <div
+      className="hf-zone-content"
+      style={{ justifyContent: justifyMap[align], textAlign: align, width: '100%' }}
+    >
       {hasImage && (
         <img
           src={zone.image}
@@ -75,6 +102,7 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const zoneLabel = zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ';
   const typeLabel = type === 'header' ? 'Üst Bilgi' : 'Alt Bilgi';
+  const currentAlign = data.align ?? defaultAlign(zone);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -118,9 +146,27 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
         <button className="hf-editor-close" onClick={onClose} title="Kapat">
           <X size={12} />
         </button>
-      </div>  {/* hf-editor-titlebar */}
+      </div>
 
       <div className="hf-editor-body">
+        {/* Alignment */}
+        <div className="hf-editor-section">
+          <label className="hf-editor-label">Yatay Hizalama</label>
+          <div className="hf-align-row">
+            {ALIGN_OPTS.map(opt => (
+              <button
+                key={opt.value}
+                className={`hf-align-btn ${currentAlign === opt.value ? 'hf-align-btn-active' : ''}`}
+                title={opt.label}
+                onMouseDown={e => { e.preventDefault(); onChange({ align: opt.value }); }}
+              >
+                <opt.icon size={13} />
+                <span>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Text input */}
         <div className="hf-editor-section">
           <label className="hf-editor-label">Metin</label>
@@ -158,7 +204,9 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
                 style={{ height: data.imageHeight ?? 28 }}
               />
               <div className="hf-logo-size-controls">
-                <span className="hf-editor-label" style={{ marginBottom: 0 }}>Yükseklik: {data.imageHeight ?? 28}px</span>
+                <span className="hf-editor-label" style={{ marginBottom: 0 }}>
+                  Yükseklik: {data.imageHeight ?? 28}px
+                </span>
                 <div className="hf-size-btns">
                   <button
                     className="hf-size-btn"
@@ -176,7 +224,9 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
                 className="hf-logo-remove-btn"
                 onMouseDown={e => { e.preventDefault(); onChange({ image: undefined }); }}
                 title="Resmi kaldır"
-              ><X size={11} /> Kaldır</button>
+              >
+                <X size={11} /> Kaldır
+              </button>
             </div>
           ) : (
             <button
@@ -208,10 +258,9 @@ export function HeaderFooterBar({
 
   if (!data.visible) return null;
 
-  const left = normalizeZone(data.left);
+  const left   = normalizeZone(data.left);
   const center = normalizeZone(data.center);
-  const right = normalizeZone(data.right);
-
+  const right  = normalizeZone(data.right);
   const zoneData = { left, center, right };
 
   const handleZoneChange = (zone: 'left' | 'center' | 'right', updates: Partial<HFZone>) => {
@@ -220,46 +269,35 @@ export function HeaderFooterBar({
 
   const zoneHasContent = (z: HFZone) => !!(z.text?.trim() || z.image);
 
+  const zones: ('left' | 'center' | 'right')[] = ['left', 'center', 'right'];
+
   return (
     <div
       ref={barRef}
       className={`hf-bar hf-bar-${type} ${activeZone ? 'hf-bar-editing' : ''}`}
       style={{ height, paddingLeft: marginLeft, paddingRight: marginRight }}
     >
-      {/* Left zone */}
-      <div
-        className={`hf-zone hf-zone-left ${activeZone === 'left' ? 'hf-zone-active' : ''}`}
-        onClick={e => { e.stopPropagation(); setActiveZone(activeZone === 'left' ? null : 'left'); }}
-        title="Sol bölgeyi düzenle"
-      >
-        {zoneHasContent(left)
-          ? <ZoneContent zone={left} noteTitle={noteTitle} pageNumber={pageNumber} />
-          : <span className="hf-empty-hint">Sol</span>}
-      </div>
+      {zones.map(zone => (
+        <div
+          key={zone}
+          className={`hf-zone hf-zone-${zone} ${activeZone === zone ? 'hf-zone-active' : ''}`}
+          onClick={e => { e.stopPropagation(); setActiveZone(activeZone === zone ? null : zone); }}
+          title={`${zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ'} bölgeyi düzenle`}
+        >
+          {zoneHasContent(zoneData[zone])
+            ? (
+              <ZoneContent
+                zone={zoneData[zone]}
+                zonePos={zone}
+                noteTitle={noteTitle}
+                pageNumber={pageNumber}
+              />
+            )
+            : <span className="hf-empty-hint">{zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ'}</span>
+          }
+        </div>
+      ))}
 
-      {/* Center zone */}
-      <div
-        className={`hf-zone hf-zone-center ${activeZone === 'center' ? 'hf-zone-active' : ''}`}
-        onClick={e => { e.stopPropagation(); setActiveZone(activeZone === 'center' ? null : 'center'); }}
-        title="Orta bölgeyi düzenle"
-      >
-        {zoneHasContent(center)
-          ? <ZoneContent zone={center} noteTitle={noteTitle} pageNumber={pageNumber} />
-          : <span className="hf-empty-hint">Orta</span>}
-      </div>
-
-      {/* Right zone */}
-      <div
-        className={`hf-zone hf-zone-right ${activeZone === 'right' ? 'hf-zone-active' : ''}`}
-        onClick={e => { e.stopPropagation(); setActiveZone(activeZone === 'right' ? null : 'right'); }}
-        title="Sağ bölgeyi düzenle"
-      >
-        {zoneHasContent(right)
-          ? <ZoneContent zone={right} noteTitle={noteTitle} pageNumber={pageNumber} />
-          : <span className="hf-empty-hint">Sağ</span>}
-      </div>
-
-      {/* Zone editor panel */}
       {activeZone && (
         <ZoneEditor
           zone={activeZone}
