@@ -96,8 +96,10 @@ export function EditorToolbar({ editor, onAddTextbox, onAddImage, onToggleFindRe
   if (!editor) return null;
 
   const handleFixText = async () => {
-    if (!settings.apiKey || !settings.selectedModel) {
-      toast({ title: 'AI Yapılandırılmadı', description: 'Ayarlar\'dan sağlayıcı ve model seçin.', variant: 'destructive' });
+    const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
+    if (!apiKey || !model) {
+      toast({ title: 'AI Yapılandırılmadı', description: 'Ayarlar\'dan API anahtarı ve model seçin.', variant: 'destructive' });
       return;
     }
     const selection = editor.state.selection;
@@ -108,7 +110,7 @@ export function EditorToolbar({ editor, onAddTextbox, onAddImage, onToggleFindRe
     if (!textToFix.trim()) return;
     setIsFixing(true);
     try {
-      const fixedText = await fixText(textToFix, settings.provider, settings.apiKey, settings.selectedModel);
+      const fixedText = await fixText(textToFix, settings.provider, apiKey, model);
       if (isTextSelected) {
         editor.commands.insertContentAt({ from: selection.from, to: selection.to }, fixedText);
       } else {

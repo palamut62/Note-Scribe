@@ -42,8 +42,10 @@ export type AppTheme =
 
 export interface Settings {
   provider: 'openrouter' | 'nvidia';
-  apiKey: string;
-  selectedModel: string;
+  openrouterApiKey: string;
+  openrouterModel: string;
+  nvidiaApiKey: string;
+  nvidiaModel: string;
   backgroundPattern: 'none' | 'lines' | 'grid';
   theme: AppTheme;
   marginTop: number;

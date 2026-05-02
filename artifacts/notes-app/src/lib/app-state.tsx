@@ -1,5 +1,6 @@
+// @refresh reset
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Note, Settings, AppTheme } from './types';
+import { Note, Settings } from './types';
 
 interface AppContextType {
   notes: Note[];
@@ -14,8 +15,10 @@ interface AppContextType {
 
 const defaultSettings: Settings = {
   provider: 'openrouter',
-  apiKey: '',
-  selectedModel: '',
+  openrouterApiKey: '',
+  openrouterModel: '',
+  nvidiaApiKey: '',
+  nvidiaModel: '',
   backgroundPattern: 'none',
   theme: 'light',
   marginTop: 80,

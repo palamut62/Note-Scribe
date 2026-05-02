@@ -14,7 +14,7 @@ const THEMES: { id: AppTheme; label: string; bg: string; fg: string; page: strin
   { id: 'light',        label: 'Açık',        bg: '#f0ede8', fg: '#2c2a29', page: '#fdfcfb' },
   { id: 'dark',         label: 'Koyu',        bg: '#252320', fg: '#e8e4dc', page: '#2b2826' },
   { id: 'sepia',        label: 'Sepia',       bg: '#ddd0b6', fg: '#3a2a18', page: '#f4ead6' },
-  { id: 'apple-yellow', label: 'Apple Not',  bg: '#f7e96a', fg: '#2c2a29', page: '#fefce8' },
+  { id: 'apple-yellow', label: 'Apple Not',   bg: '#f7e96a', fg: '#2c2a29', page: '#fefce8' },
   { id: 'dark-blue',    label: 'Gece Mavisi', bg: '#0e1624', fg: '#c8d8e8', page: '#131f2e' },
   { id: 'green-black',  label: 'Terminal',    bg: '#0a0a0a', fg: '#3ddc6a', page: '#111111' },
 ];
@@ -25,27 +25,128 @@ const MARGIN_PRESETS = [
   { label: 'Geniş',  top: 120, bottom: 140, left: 128, right: 128 },
 ];
 
+type ProviderStatus = 'idle' | 'loading' | 'ok' | 'error';
+
+interface ProviderBlockProps {
+  id: 'openrouter' | 'nvidia';
+  label: string;
+  apiKey: string;
+  model: string;
+  models: { id: string; name: string }[];
+  status: ProviderStatus;
+  isActive: boolean;
+  onSetActive: () => void;
+  onChangeKey: (v: string) => void;
+  onFetch: () => void;
+  onSelectModel: (v: string) => void;
+}
+
+function ProviderBlock({
+  id, label, apiKey, model, models, status, isActive,
+  onSetActive, onChangeKey, onFetch, onSelectModel,
+}: ProviderBlockProps) {
+  return (
+    <div
+      className={`rounded-lg border p-4 space-y-3 cursor-pointer transition-all ${
+        isActive
+          ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+          : 'border-border hover:border-muted-foreground'
+      }`}
+      onClick={onSetActive}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold">{label}</span>
+        {isActive && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
+            Aktif
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-1.5" onClick={e => e.stopPropagation()}>
+        <Label className="text-xs text-muted-foreground">API Anahtarı</Label>
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={e => onChangeKey(e.target.value)}
+          placeholder={`${label} API anahtarı`}
+          className="h-8 text-sm"
+        />
+      </div>
+
+      <div className="flex items-end gap-2" onClick={e => e.stopPropagation()}>
+        <div className="grid gap-1.5 flex-1">
+          <Label className="text-xs text-muted-foreground">Model</Label>
+          <Select
+            value={model}
+            onValueChange={onSelectModel}
+            disabled={models.length === 0 && !model}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Model seç" />
+            </SelectTrigger>
+            <SelectContent>
+              {model && models.length === 0 && (
+                <SelectItem value={model}>{model}</SelectItem>
+              )}
+              {models.map(m => (
+                <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="h-8 px-3 text-xs shrink-0"
+          onClick={e => { e.stopPropagation(); onFetch(); }}
+          disabled={!apiKey || status === 'loading'}
+          title="Modelleri getir"
+        >
+          {status === 'loading'
+            ? <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+            : 'Getir'}
+        </Button>
+      </div>
+
+      {status === 'ok' && (
+        <p className="text-[11px] text-green-600 flex items-center gap-1">
+          <CheckCircle2 className="h-3 w-3" /> Bağlantı başarılı
+        </p>
+      )}
+      {status === 'error' && (
+        <p className="text-[11px] text-destructive flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" /> Bağlantı başarısız
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function SettingsDialog() {
   const { settings, updateSettings } = useApp();
-  const [models, setModels] = useState<{ id: string; name: string }[]>([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
-  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [orModels, setOrModels]     = useState<{ id: string; name: string }[]>([]);
+  const [nvModels, setNvModels]     = useState<{ id: string; name: string }[]>([]);
+  const [orStatus, setOrStatus]     = useState<ProviderStatus>('idle');
+  const [nvStatus, setNvStatus]     = useState<ProviderStatus>('idle');
 
-  const handleFetchModels = async () => {
-    if (!settings.apiKey) return;
-    setIsLoadingModels(true);
-    setTestStatus('testing');
+  const fetchFor = async (provider: 'openrouter' | 'nvidia') => {
+    const key = provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    if (!key) return;
+    const setStatus = provider === 'openrouter' ? setOrStatus : setNvStatus;
+    const setModels = provider === 'openrouter' ? setOrModels : setNvModels;
+    const modelKey  = provider === 'openrouter' ? 'openrouterModel' : 'nvidiaModel';
+    const curModel  = provider === 'openrouter' ? settings.openrouterModel : settings.nvidiaModel;
+    setStatus('loading');
     try {
-      const fetched = await fetchModels(settings.provider, settings.apiKey);
+      const fetched = await fetchModels(provider, key);
       setModels(fetched);
-      setTestStatus('success');
-      if (fetched.length > 0 && !fetched.find(m => m.id === settings.selectedModel)) {
-        updateSettings({ selectedModel: fetched[0].id });
+      setStatus('ok');
+      if (fetched.length > 0 && !fetched.find(m => m.id === curModel)) {
+        updateSettings({ [modelKey]: fetched[0].id });
       }
-    } catch (e) {
-      setTestStatus('error');
-    } finally {
-      setIsLoadingModels(false);
+    } catch {
+      setStatus('error');
     }
   };
 
@@ -65,12 +166,49 @@ export function SettingsDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[460px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[480px] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Ayarlar</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-7 py-2">
+
+          {/* ── AI Sağlayıcıları ── */}
+          <div className="space-y-3">
+            <h3 className="font-medium text-sm border-b pb-2">AI Sağlayıcıları</h3>
+            <p className="text-xs text-muted-foreground">
+              Her iki sağlayıcı için API anahtarı girebilirsin. Aktif olanı AI Düzelt butonunda kullanılır.
+            </p>
+
+            <div className="grid gap-3">
+              <ProviderBlock
+                id="openrouter"
+                label="OpenRouter"
+                apiKey={settings.openrouterApiKey}
+                model={settings.openrouterModel}
+                models={orModels}
+                status={orStatus}
+                isActive={settings.provider === 'openrouter'}
+                onSetActive={() => updateSettings({ provider: 'openrouter' })}
+                onChangeKey={v => updateSettings({ openrouterApiKey: v })}
+                onFetch={() => fetchFor('openrouter')}
+                onSelectModel={v => updateSettings({ openrouterModel: v })}
+              />
+              <ProviderBlock
+                id="nvidia"
+                label="NVIDIA NIM"
+                apiKey={settings.nvidiaApiKey}
+                model={settings.nvidiaModel}
+                models={nvModels}
+                status={nvStatus}
+                isActive={settings.provider === 'nvidia'}
+                onSetActive={() => updateSettings({ provider: 'nvidia' })}
+                onChangeKey={v => updateSettings({ nvidiaApiKey: v })}
+                onFetch={() => fetchFor('nvidia')}
+                onSelectModel={v => updateSettings({ nvidiaModel: v })}
+              />
+            </div>
+          </div>
 
           {/* ── Tema ── */}
           <div className="space-y-3">
@@ -85,13 +223,9 @@ export function SettingsDialog() {
                       ? 'border-primary shadow-md scale-[1.03]'
                       : 'border-border hover:border-muted-foreground'
                   }`}
-                  title={t.label}
                 >
-                  {/* Mini preview */}
                   <div className="h-14 flex flex-col" style={{ background: t.bg }}>
-                    {/* Toolbar stripe */}
-                    <div className="h-3 w-full" style={{ background: t.bg, opacity: 0.7, borderBottom: `1px solid ${t.fg}22` }} />
-                    {/* Page */}
+                    <div className="h-3 w-full" style={{ borderBottom: `1px solid ${t.fg}22` }} />
                     <div className="flex-1 mx-2 my-1 rounded-sm flex flex-col gap-[3px] px-1.5 pt-1" style={{ background: t.page }}>
                       <div className="h-[3px] rounded-full w-3/4" style={{ background: t.fg, opacity: 0.7 }} />
                       <div className="h-[3px] rounded-full w-full" style={{ background: t.fg, opacity: 0.4 }} />
@@ -113,26 +247,20 @@ export function SettingsDialog() {
             </div>
           </div>
 
-          {/* ── Sayfa Kenar Boşlukları ── */}
+          {/* ── Kenar Boşlukları ── */}
           <div className="space-y-3">
             <h3 className="font-medium text-sm border-b pb-2">Sayfa Kenar Boşlukları</h3>
-
-            {/* Presets */}
             <div className="flex gap-2">
               {MARGIN_PRESETS.map(p => {
                 const active =
-                  settings.marginTop === p.top &&
-                  settings.marginBottom === p.bottom &&
-                  settings.marginLeft === p.left &&
-                  settings.marginRight === p.right;
+                  settings.marginTop === p.top && settings.marginBottom === p.bottom &&
+                  settings.marginLeft === p.left && settings.marginRight === p.right;
                 return (
                   <button
                     key={p.label}
                     onClick={() => updateSettings({ marginTop: p.top, marginBottom: p.bottom, marginLeft: p.left, marginRight: p.right })}
                     className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:bg-accent'
+                      active ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:bg-accent'
                     }`}
                   >
                     {p.label}
@@ -140,8 +268,6 @@ export function SettingsDialog() {
                 );
               })}
             </div>
-
-            {/* Custom inputs — Word-style: top/bottom/left/right */}
             <div className="grid grid-cols-2 gap-3">
               {(
                 [
@@ -154,10 +280,7 @@ export function SettingsDialog() {
                 <div key={key} className="grid gap-1">
                   <Label className="text-xs text-muted-foreground">{label} (px)</Label>
                   <Input
-                    type="number"
-                    min={0}
-                    max={300}
-                    step={8}
+                    type="number" min={0} max={300} step={8}
                     value={marginVal(key)}
                     onChange={e => setMargin(key, e.target.value)}
                     className="h-8 text-sm"
@@ -167,7 +290,7 @@ export function SettingsDialog() {
             </div>
           </div>
 
-          {/* ── Arka Plan Deseni ── */}
+          {/* ── Sayfa Deseni ── */}
           <div className="space-y-3">
             <h3 className="font-medium text-sm border-b pb-2">Sayfa Deseni</h3>
             <RadioGroup
@@ -178,76 +301,12 @@ export function SettingsDialog() {
               {(['none', 'lines', 'grid'] as const).map(v => (
                 <div key={v} className="flex items-center space-x-2">
                   <RadioGroupItem value={v} id={`pat-${v}`} />
-                  <Label htmlFor={`pat-${v}`} className="capitalize text-sm">
+                  <Label htmlFor={`pat-${v}`} className="text-sm">
                     {v === 'none' ? 'Yok' : v === 'lines' ? 'Çizgili' : 'Kareli'}
                   </Label>
                 </div>
               ))}
             </RadioGroup>
-          </div>
-
-          {/* ── AI Provider ── */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-sm border-b pb-2">AI Sağlayıcı</h3>
-
-            <div className="grid gap-2">
-              <Label>Sağlayıcı</Label>
-              <Select
-                value={settings.provider}
-                onValueChange={(val: 'openrouter' | 'nvidia') => updateSettings({ provider: val, selectedModel: '' })}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openrouter">OpenRouter</SelectItem>
-                  <SelectItem value="nvidia">NVIDIA NIM</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>API Anahtarı</Label>
-              <Input
-                type="password"
-                value={settings.apiKey}
-                onChange={e => updateSettings({ apiKey: e.target.value })}
-                placeholder={`${settings.provider} API anahtarı`}
-              />
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="grid gap-2 flex-1">
-                <Label>Model</Label>
-                <Select
-                  value={settings.selectedModel}
-                  onValueChange={val => updateSettings({ selectedModel: val })}
-                  disabled={models.length === 0 && !settings.selectedModel}
-                >
-                  <SelectTrigger><SelectValue placeholder="Model seç" /></SelectTrigger>
-                  <SelectContent>
-                    {settings.selectedModel && models.length === 0 && (
-                      <SelectItem value={settings.selectedModel}>{settings.selectedModel}</SelectItem>
-                    )}
-                    {models.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button onClick={handleFetchModels} disabled={!settings.apiKey || isLoadingModels} variant="secondary">
-                {isLoadingModels ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Modelleri Getir'}
-              </Button>
-            </div>
-
-            {testStatus === 'success' && (
-              <p className="text-xs text-green-600 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Bağlantı başarılı
-              </p>
-            )}
-            {testStatus === 'error' && (
-              <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" /> Bağlantı başarısız
-              </p>
-            )}
           </div>
 
         </div>

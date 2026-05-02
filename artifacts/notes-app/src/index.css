@@ -525,7 +525,7 @@
 }
 
 .editor-content-area {
-  padding: 28px 44px 120px 44px;
+  /* padding controlled via inline style from settings (margins) */
   position: relative;
   z-index: 1;
 }
