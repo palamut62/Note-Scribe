@@ -572,6 +572,7 @@
     var(--pattern-line) 27px, var(--pattern-line) 28px
   );
   background-origin: content-box;
+  background-clip: content-box;
   background-attachment: local;
 }
 
@@ -586,6 +587,7 @@
       var(--pattern-line) 27px, var(--pattern-line) 28px
     );
   background-origin: content-box;
+  background-clip: content-box;
   background-attachment: local;
 }
 
