@@ -106,9 +106,11 @@ export function PrintPreview({ note, settings, onClose }: Props) {
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handler);
     document.body.style.overflow = 'hidden';
+    document.body.classList.add('pp-mode');
     return () => {
       window.removeEventListener('keydown', handler);
       document.body.style.overflow = '';
+      document.body.classList.remove('pp-mode');
     };
   }, [onClose]);
 
