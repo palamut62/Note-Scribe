@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Note, Settings } from './types';
+import { Note, Settings, AppTheme } from './types';
 
 interface AppContextType {
   notes: Note[];
@@ -17,6 +17,11 @@ const defaultSettings: Settings = {
   apiKey: '',
   selectedModel: '',
   backgroundPattern: 'none',
+  theme: 'light',
+  marginTop: 80,
+  marginBottom: 120,
+  marginLeft: 80,
+  marginRight: 80,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -49,6 +54,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem('notes-settings', JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-theme', settings.theme ?? 'light');
+    if (settings.theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [settings.theme]);
 
   const createNote = useCallback((initial?: { title?: string; content?: string }) => {
     const newNote: Note = {

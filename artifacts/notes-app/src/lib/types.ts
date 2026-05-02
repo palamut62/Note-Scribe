@@ -32,9 +32,22 @@ export interface Note {
   updatedAt: string;
 }
 
+export type AppTheme =
+  | 'light'
+  | 'dark'
+  | 'sepia'
+  | 'apple-yellow'
+  | 'dark-blue'
+  | 'green-black';
+
 export interface Settings {
   provider: 'openrouter' | 'nvidia';
   apiKey: string;
   selectedModel: string;
   backgroundPattern: 'none' | 'lines' | 'grid';
+  theme: AppTheme;
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
 }

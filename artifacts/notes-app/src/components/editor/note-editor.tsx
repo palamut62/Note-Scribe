@@ -202,7 +202,15 @@ export function NoteEditor({ note }: Props) {
               onFocus={() => { setActiveImageId(img.id); setActiveTextboxId(null); }}
             />
           ))}
-          <div className="editor-content-area">
+          <div
+            className="editor-content-area"
+            style={{
+              paddingTop: settings.marginTop ?? 80,
+              paddingBottom: settings.marginBottom ?? 120,
+              paddingLeft: settings.marginLeft ?? 80,
+              paddingRight: settings.marginRight ?? 80,
+            }}
+          >
             <EditorContent editor={editor} />
           </div>
         </div>
