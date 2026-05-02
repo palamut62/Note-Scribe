@@ -12,7 +12,7 @@ import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
-import { Note, TextBox, FloatingImage, HeaderFooter } from '@/lib/types';
+import { Note, TextBox, FloatingImage, HeaderFooter, HFZone } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
@@ -168,8 +168,23 @@ export function NoteEditor({ note }: Props) {
     setActiveImageId(null);
   };
 
-  const safeHeader: HeaderFooter = note.header ?? { left: '', center: '', right: '', visible: false };
-  const safeFooter: HeaderFooter = note.footer ?? { left: '', center: '{sayfa}', right: '', visible: false };
+  function migrateZone(z: unknown): HFZone {
+    if (!z) return { text: '' };
+    if (typeof z === 'string') return { text: z };
+    return z as HFZone;
+  }
+  function migrateHF(hf: unknown, defaultCenter = ''): HeaderFooter {
+    const h = hf as Record<string, unknown> | undefined | null;
+    if (!h) return { left: { text: '' }, center: { text: defaultCenter }, right: { text: '' }, visible: false };
+    return {
+      left: migrateZone(h.left),
+      center: migrateZone(h.center),
+      right: migrateZone(h.right),
+      visible: !!(h.visible),
+    };
+  }
+  const safeHeader: HeaderFooter = migrateHF(note.header);
+  const safeFooter: HeaderFooter = migrateHF(note.footer, '{sayfa}');
 
   return (
     <div className="editor-shell">

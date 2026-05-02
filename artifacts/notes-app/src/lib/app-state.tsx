@@ -75,8 +75,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content: initial?.content || '',
       textboxes: [],
       images: [],
-      header: { left: '', center: '', right: '', visible: false },
-      footer: { left: '', center: '{sayfa}', right: '', visible: false },
+      header: { left: { text: '' }, center: { text: '' }, right: { text: '' }, visible: false },
+      footer: { left: { text: '' }, center: { text: '{sayfa}' }, right: { text: '' }, visible: false },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

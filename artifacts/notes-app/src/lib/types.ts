@@ -22,10 +22,16 @@ export interface FloatingImage {
   alt: string;
 }
 
+export interface HFZone {
+  text: string;
+  image?: string;
+  imageHeight?: number;
+}
+
 export interface HeaderFooter {
-  left: string;
-  center: string;
-  right: string;
+  left: HFZone;
+  center: HFZone;
+  right: HFZone;
   visible: boolean;
 }
 

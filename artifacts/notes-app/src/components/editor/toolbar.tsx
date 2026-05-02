@@ -13,7 +13,7 @@ import { useApp } from '@/lib/app-state';
 import { fixText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
-import { Note, HeaderFooter } from '@/lib/types';
+import { Note, HeaderFooter, HFZone } from '@/lib/types';
 import { HeaderFooterToggle } from './header-footer-bar';
 
 interface ToolbarProps {
@@ -98,8 +98,23 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
 
   if (!editor) return null;
 
-  const safeHeader: HeaderFooter = note.header ?? { left: '', center: '', right: '', visible: false };
-  const safeFooter: HeaderFooter = note.footer ?? { left: '', center: '{sayfa}', right: '', visible: false };
+  function migrateZone(z: unknown): HFZone {
+    if (!z) return { text: '' };
+    if (typeof z === 'string') return { text: z };
+    return z as HFZone;
+  }
+  function migrateHF(hf: unknown, defaultCenter = ''): HeaderFooter {
+    const h = hf as Record<string, unknown> | undefined | null;
+    if (!h) return { left: { text: '' }, center: { text: defaultCenter }, right: { text: '' }, visible: false };
+    return {
+      left: migrateZone(h.left),
+      center: migrateZone(h.center),
+      right: migrateZone(h.right),
+      visible: !!(h.visible),
+    };
+  }
+  const safeHeader: HeaderFooter = migrateHF(note.header);
+  const safeFooter: HeaderFooter = migrateHF(note.footer, '{sayfa}');
 
   const handleInsertDate = () => {
     const today = new Date().toLocaleDateString('tr-TR', {
