@@ -243,10 +243,34 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           toast({ title: 'No text found', description: 'No text could be extracted from the image.', variant: 'destructive' });
           return;
         }
+
+        // Build HTML: blank lines become empty <p>, other lines become <p>text</p>
         const lines = text.split('\n');
-        const html = lines.map(l => `<p>${l.trim() || '<br>'}</p>`).join('');
-        editor.chain().focus().insertContent(html).run();
-        toast({ title: 'OCR complete', description: `Extracted ${lines.filter(l => l.trim()).length} lines of text.` });
+        const contentHtml = lines
+          .map(l => l.trim() === '' ? '<p></p>' : `<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`)
+          .join('');
+
+        // Move cursor to end of document, then insert a separator blank line + the OCR content
+        const doc = editor.state.doc;
+        const end = doc.content.size;
+
+        // Find the last node that actually has text
+        let lastContentPos = end;
+        doc.descendants((node, pos) => {
+          if (node.isTextblock && node.textContent.trim().length > 0) {
+            lastContentPos = pos + node.nodeSize;
+          }
+        });
+
+        editor
+          .chain()
+          .focus()
+          .setTextSelection(lastContentPos)
+          .insertContent('<p></p>' + contentHtml)
+          .run();
+
+        const lineCount = lines.filter(l => l.trim()).length;
+        toast({ title: 'OCR complete', description: `${lineCount} line${lineCount !== 1 ? 's' : ''} extracted and inserted.` });
       } catch (err: any) {
         toast({ title: 'OCR failed', description: err.message || 'Could not extract text.', variant: 'destructive' });
       } finally {

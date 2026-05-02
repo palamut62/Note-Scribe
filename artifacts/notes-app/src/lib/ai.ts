@@ -3,11 +3,38 @@ const PROXY_BASE = '/api/ai-proxy';
 // Best NVIDIA NIM vision model for OCR
 const OCR_MODEL = 'nvidia/llama-3.2-11b-vision-instruct';
 
+/** Resize + compress image to JPEG ≤ 1024 px on longest side, quality 0.82.
+ *  NVIDIA NIM has a ~180 KB base64 payload limit per image. */
+export function resizeImageForOcr(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1024;
+      let { width, height } = img;
+      if (width > MAX || height > MAX) {
+        if (width >= height) { height = Math.round((height * MAX) / width); width = MAX; }
+        else                  { width = Math.round((width * MAX) / height); height = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
 export async function ocrImage(
   imageDataUrl: string,
   apiKey: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('NVIDIA API key required');
+
+  // Compress before sending to avoid 502 / payload-too-large
+  const compressed = await resizeImageForOcr(imageDataUrl);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=nvidia`, {
     method: 'POST',
@@ -23,17 +50,17 @@ export async function ocrImage(
           content: [
             {
               type: 'text',
-              text: 'Extract all text from this image exactly as it appears. Return only the extracted text, preserving line breaks and paragraph structure. Do not add any commentary, explanation, or formatting markers.',
+              text: 'You are an OCR engine. Extract every word and character from this image exactly as written. Preserve the original layout: keep each line on its own line, preserve paragraph breaks as blank lines, and maintain indentation with spaces. Return ONLY the extracted text — no explanations, no markdown fences, no extra commentary.',
             },
             {
               type: 'image_url',
-              image_url: { url: imageDataUrl },
+              image_url: { url: compressed },
             },
           ],
         },
       ],
       max_tokens: 2048,
-      temperature: 0.1,
+      temperature: 0,
     }),
   });
 
