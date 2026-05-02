@@ -206,6 +206,25 @@ export function NoteEditor({ note }: Props) {
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   const pageRef = useRef<HTMLDivElement>(null);
+  const editorContentRef = useRef<HTMLDivElement>(null);
+  const [pageMinH, setPageMinH] = useState(PAGE_H);
+  const pageMinHRef = useRef(PAGE_H);
+
+  useEffect(() => {
+    const el = editorContentRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(() => {
+      const h = el.offsetHeight;
+      const pages = Math.max(1, Math.ceil(h / PAGE_H));
+      const snapped = pages * PAGE_H + (pages - 1) * SEP_H;
+      if (snapped !== pageMinHRef.current) {
+        pageMinHRef.current = snapped;
+        setPageMinH(snapped);
+      }
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -418,7 +437,7 @@ export function NoteEditor({ note }: Props) {
         onClick={drawMode ? undefined : handlePageClick}
         style={{ cursor: drawMode ? 'default' : undefined }}
       >
-        <div className="editor-page" ref={pageRef}>
+        <div className="editor-page" ref={pageRef} style={{ minHeight: pageMinH }}>
           <DrawingCanvas
             ref={drawCanvasRef}
             ops={note.drawOps ?? []}
@@ -484,6 +503,7 @@ export function NoteEditor({ note }: Props) {
           />
 
           <div
+            ref={editorContentRef}
             className="editor-content-area"
             style={{
               paddingTop: settings.marginTop ?? 80,
