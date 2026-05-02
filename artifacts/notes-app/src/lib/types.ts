@@ -37,7 +37,7 @@ export interface HeaderFooter {
 }
 
 /* ─── Drawing ─────────────────────────────────────────────────────────────── */
-export type DrawTool = 'pen' | 'highlight' | 'line' | 'arrow' | 'rect' | 'ellipse' | 'eraser';
+export type DrawTool = 'pen' | 'highlight' | 'line' | 'arrow' | 'rect' | 'ellipse' | 'eraser' | 'move';
 
 interface DrawBase { id: string; color: string; width: number; opacity?: number; }
 export interface PenOp       extends DrawBase { type: 'pen';       pts: number[]; }

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X, GripVertical, ImageDown } from 'lucide-react';
+import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X, GripVertical, ImageDown, Move } from 'lucide-react';
 import type { DrawTool, Language } from '@/lib/types';
 import { makeT } from '@/lib/i18n';
 
@@ -66,6 +66,7 @@ export function DrawingToolbar({
   }, [pos, onDragMove, onDragEnd]);
 
   const tools: { id: DrawTool; icon: React.ReactNode; key: Parameters<typeof t>[0] }[] = [
+    { id: 'move',      icon: <Move        size={13} />, key: 'draw.move'      },
     { id: 'pen',       icon: <Pencil      size={13} />, key: 'draw.pen'       },
     { id: 'highlight', icon: <Highlighter size={13} />, key: 'draw.highlight' },
     { id: 'line',      icon: <Minus       size={13} />, key: 'draw.line'      },

@@ -52,6 +52,7 @@ const DICT = {
     'draw.ellipse': 'Elips/Daire',
     'draw.eraser': 'Silgi',
     'draw.savepng': 'PNG kaydet',
+    'draw.move': 'Taşı',
     // settings
     'settings.title': 'Ayarlar',
     'settings.language': 'Arayüz Dili',
@@ -129,6 +130,7 @@ const DICT = {
     'draw.ellipse': 'Ellipse/Circle',
     'draw.eraser': 'Eraser',
     'draw.savepng': 'Save PNG',
+    'draw.move': 'Move',
     // settings
     'settings.title': 'Settings',
     'settings.language': 'Interface Language',

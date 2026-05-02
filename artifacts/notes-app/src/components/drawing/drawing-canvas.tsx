@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle, useState } from 'react';
 import type { DrawOp, DrawTool } from '@/lib/types';
 
 export interface DrawingCanvasHandle {
@@ -17,17 +17,121 @@ interface Props {
   active: boolean;
 }
 
+/* ─── Geometry helpers ─────────────────────────────────────────────────── */
+
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function hitTest(op: DrawOp, px: number, py: number): boolean {
+  const TOL = 10;
+  switch (op.type) {
+    case 'pen':
+    case 'highlight':
+    case 'eraser': {
+      const hw = op.width / 2 + TOL;
+      for (let i = 0; i < op.pts.length - 2; i += 2) {
+        if (distToSegment(px, py, op.pts[i], op.pts[i + 1], op.pts[i + 2], op.pts[i + 3]) < hw) return true;
+      }
+      return false;
+    }
+    case 'line':
+    case 'arrow':
+      return distToSegment(px, py, op.x1, op.y1, op.x2, op.y2) < op.width / 2 + TOL;
+    case 'rect': {
+      const x0 = Math.min(op.x, op.x + op.w) - TOL;
+      const x1 = Math.max(op.x, op.x + op.w) + TOL;
+      const y0 = Math.min(op.y, op.y + op.h) - TOL;
+      const y1 = Math.max(op.y, op.y + op.h) + TOL;
+      return px >= x0 && px <= x1 && py >= y0 && py <= y1;
+    }
+    case 'ellipse': {
+      const dx = (px - op.cx) / (op.rx + TOL);
+      const dy = (py - op.cy) / (op.ry + TOL);
+      return dx * dx + dy * dy <= 1;
+    }
+    default: return false;
+  }
+}
+
+function moveOp(op: DrawOp, dx: number, dy: number): DrawOp {
+  switch (op.type) {
+    case 'pen':
+    case 'highlight':
+    case 'eraser': {
+      const pts = [...op.pts];
+      for (let i = 0; i < pts.length; i += 2) { pts[i] += dx; pts[i + 1] += dy; }
+      return { ...op, pts };
+    }
+    case 'line':
+    case 'arrow':
+      return { ...op, x1: op.x1 + dx, y1: op.y1 + dy, x2: op.x2 + dx, y2: op.y2 + dy };
+    case 'rect':
+      return { ...op, x: op.x + dx, y: op.y + dy };
+    case 'ellipse':
+      return { ...op, cx: op.cx + dx, cy: op.cy + dy };
+    default: return op;
+  }
+}
+
+function getBounds(op: DrawOp): { x: number; y: number; w: number; h: number } {
+  switch (op.type) {
+    case 'pen':
+    case 'highlight':
+    case 'eraser': {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = 0; i < op.pts.length; i += 2) {
+        minX = Math.min(minX, op.pts[i]);     maxX = Math.max(maxX, op.pts[i]);
+        minY = Math.min(minY, op.pts[i + 1]); maxY = Math.max(maxY, op.pts[i + 1]);
+      }
+      return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+    case 'line':
+    case 'arrow':
+      return { x: Math.min(op.x1, op.x2), y: Math.min(op.y1, op.y2), w: Math.abs(op.x2 - op.x1), h: Math.abs(op.y2 - op.y1) };
+    case 'rect':
+      return { x: Math.min(op.x, op.x + op.w), y: Math.min(op.y, op.y + op.h), w: Math.abs(op.w), h: Math.abs(op.h) };
+    case 'ellipse':
+      return { x: op.cx - op.rx, y: op.cy - op.ry, w: op.rx * 2, h: op.ry * 2 };
+    default: return { x: 0, y: 0, w: 0, h: 0 };
+  }
+}
+
+function drawSelectionBox(ctx: CanvasRenderingContext2D, op: DrawOp) {
+  const PAD = 6;
+  const b = getBounds(op);
+  ctx.save();
+  ctx.strokeStyle = '#2563eb';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 3]);
+  ctx.globalAlpha = 0.85;
+  ctx.strokeRect(b.x - PAD, b.y - PAD, b.w + PAD * 2, b.h + PAD * 2);
+  ctx.restore();
+}
+
+/* ─── Component ────────────────────────────────────────────────────────── */
+
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
   function DrawingCanvas({ ops, onOpsChange, tool, color, strokeWidth, active }, ref) {
-    const canvasRef   = useRef<HTMLCanvasElement>(null);
-    const isDrawing   = useRef(false);
-    const currentOp   = useRef<DrawOp | null>(null);
-    const opsRef      = useRef(ops);
+    const canvasRef     = useRef<HTMLCanvasElement>(null);
+    const isDrawing     = useRef(false);
+    const currentOp     = useRef<DrawOp | null>(null);
+    const opsRef        = useRef(ops);
     opsRef.current = ops;
+
+    // Move-tool state
+    const selectedIdRef = useRef<string | null>(null);
+    const movingOpRef   = useRef<DrawOp | null>(null);   // live preview during drag
+    const dragOriginRef = useRef<{ x: number; y: number } | null>(null);
+    const [, forceRender] = useState(0); // trigger cursor recalc on hover
 
     useImperativeHandle(ref, () => ({
       undo:  () => { if (opsRef.current.length > 0) onOpsChange(opsRef.current.slice(0, -1)); },
-      clear: () => onOpsChange([]),
+      clear: () => { selectedIdRef.current = null; movingOpRef.current = null; onOpsChange([]); },
       getCanvas: () => canvasRef.current,
       renderOpsToCanvas: (target: HTMLCanvasElement) => {
         const ctx = target.getContext('2d');
@@ -42,8 +146,26 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const op of opsRef.current) renderOp(ctx, op);
+
+      const movingId = movingOpRef.current?.id ?? null;
+
+      for (const op of opsRef.current) {
+        if (op.id === movingId) continue; // skip original while dragging
+        renderOp(ctx, op);
+        // draw selection box for selected (non-moving) op
+        if (op.id === selectedIdRef.current && !movingOpRef.current) {
+          drawSelectionBox(ctx, op);
+        }
+      }
+
+      // Draw current in-progress draw op
       if (currentOp.current) renderOp(ctx, currentOp.current);
+
+      // Draw moving op with selection box
+      if (movingOpRef.current) {
+        renderOp(ctx, movingOpRef.current);
+        drawSelectionBox(ctx, movingOpRef.current);
+      }
     }, []);
 
     useEffect(() => {
@@ -64,6 +186,16 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
 
     useEffect(() => { redraw(); }, [ops, redraw]);
 
+    // Deselect when switching away from move tool
+    useEffect(() => {
+      if (tool !== 'move') {
+        selectedIdRef.current = null;
+        movingOpRef.current   = null;
+        dragOriginRef.current = null;
+        redraw();
+      }
+    }, [tool, redraw]);
+
     useEffect(() => {
       if (!active) return;
       const onKeyDown = (e: KeyboardEvent) => {
@@ -71,22 +203,53 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
           e.preventDefault();
           if (opsRef.current.length > 0) onOpsChange(opsRef.current.slice(0, -1));
         }
+        // Delete/Backspace removes selected shape
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIdRef.current && tool === 'move') {
+          e.preventDefault();
+          onOpsChange(opsRef.current.filter(o => o.id !== selectedIdRef.current));
+          selectedIdRef.current = null;
+          movingOpRef.current   = null;
+          redraw();
+        }
       };
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
-    }, [active, onOpsChange]);
+    }, [active, onOpsChange, tool, redraw]);
 
     const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
       const rect = canvasRef.current!.getBoundingClientRect();
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
+    /* ── Pointer handlers ─────────────────────────────────────────────── */
+
     const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (!active) return;
       e.preventDefault();
       canvasRef.current?.setPointerCapture(e.pointerId);
-      isDrawing.current = true;
       const { x, y } = getPos(e);
+
+      if (tool === 'move') {
+        // Hit-test from top (last drawn = topmost)
+        let hit: DrawOp | null = null;
+        for (let i = opsRef.current.length - 1; i >= 0; i--) {
+          if (hitTest(opsRef.current[i], x, y)) { hit = opsRef.current[i]; break; }
+        }
+        if (hit) {
+          selectedIdRef.current = hit.id;
+          movingOpRef.current   = { ...hit } as DrawOp;
+          dragOriginRef.current = { x, y };
+        } else {
+          selectedIdRef.current = null;
+          movingOpRef.current   = null;
+          dragOriginRef.current = null;
+        }
+        isDrawing.current = !!hit;
+        redraw();
+        return;
+      }
+
+      isDrawing.current = true;
       const id = crypto.randomUUID();
       switch (tool) {
         case 'pen':       currentOp.current = { id, type: 'pen',       pts: [x, y], color, width: strokeWidth }; break;
@@ -100,9 +263,24 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
     };
 
     const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      if (!active || !isDrawing.current || !currentOp.current) return;
+      if (!active) return;
       e.preventDefault();
       const { x, y } = getPos(e);
+
+      if (tool === 'move') {
+        if (isDrawing.current && dragOriginRef.current && movingOpRef.current) {
+          const origOp = opsRef.current.find(o => o.id === selectedIdRef.current);
+          if (origOp) {
+            const dx = x - dragOriginRef.current.x;
+            const dy = y - dragOriginRef.current.y;
+            movingOpRef.current = moveOp(origOp, dx, dy);
+            redraw();
+          }
+        }
+        return;
+      }
+
+      if (!isDrawing.current || !currentOp.current) return;
       const op = currentOp.current;
       if (op.type === 'pen' || op.type === 'highlight' || op.type === 'eraser') {
         op.pts.push(x, y);
@@ -117,7 +295,20 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
     };
 
     const onPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
-      if (!active || !isDrawing.current) return;
+      if (!active) return;
+
+      if (tool === 'move') {
+        if (isDrawing.current && movingOpRef.current) {
+          const movedOp = movingOpRef.current;
+          const newOps  = opsRef.current.map(o => o.id === movedOp.id ? movedOp : o);
+          movingOpRef.current = null;
+          onOpsChange(newOps);
+        }
+        isDrawing.current = false;
+        return;
+      }
+
+      if (!isDrawing.current) return;
       isDrawing.current = false;
       const op = currentOp.current;
       if (op) {
@@ -132,6 +323,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
       }
     };
 
+    /* ── Cursor ───────────────────────────────────────────────────────── */
+    let cursor: string;
+    if (tool === 'eraser') cursor = 'cell';
+    else if (tool === 'move') cursor = isDrawing.current ? 'grabbing' : 'default';
+    else cursor = 'crosshair';
+
     return (
       <canvas
         ref={canvasRef}
@@ -140,7 +337,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
           inset: 0,
           zIndex: active ? 50 : -1,
           pointerEvents: active ? 'all' : 'none',
-          cursor: tool === 'eraser' ? 'cell' : 'crosshair',
+          cursor,
           touchAction: 'none',
         }}
         onPointerDown={onPointerDown}
@@ -151,6 +348,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
     );
   }
 );
+
+/* ─── Renderer ─────────────────────────────────────────────────────────── */
 
 function renderOp(ctx: CanvasRenderingContext2D, op: DrawOp) {
   ctx.save();
