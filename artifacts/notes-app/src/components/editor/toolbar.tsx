@@ -265,24 +265,31 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     }
 
     // ── Detect font SYNCHRONOUSLY at click time ─────────────────────────────
-    // 1) Start with TipTap's own cursor-context attributes (most reliable)
+    // 1) Cursor context is PRIMARY — reads storedMarks + marks at cursor pos.
+    //    This is what the user is actively typing with on the last line.
     const cursorStyle = editor.getAttributes('textStyle');
     let ocrFontSize   = (cursorStyle.fontSize   as string) || '';
-    let ocrFontFamily = (cursorStyle.fontFamily  as string) || '';
+    let ocrFontFamily = (cursorStyle.fontFamily as string) || '';
 
-    // 2) Walk ALL text nodes to find the last explicit textStyle mark.
-    //    This covers the case where the cursor is in an empty paragraph
-    //    but the rest of the document has styled text.
-    editor.state.doc.descendants((node) => {
-      if (node.isText) {
-        for (const mark of node.marks) {
-          if (mark.type.name === 'textStyle') {
-            if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize  as string;
-            if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily as string;
+    // 2) ONLY if cursor gave nothing, fall back to the last text node in the
+    //    document that carries explicit textStyle marks. Walk the whole doc but
+    //    keep overwriting so we end up with the LAST (bottom-most) value.
+    if (!ocrFontSize || !ocrFontFamily) {
+      let lastFs = '';
+      let lastFf = '';
+      editor.state.doc.descendants((node) => {
+        if (node.isText) {
+          for (const mark of node.marks) {
+            if (mark.type.name === 'textStyle') {
+              if (mark.attrs.fontSize)   lastFs = mark.attrs.fontSize  as string;
+              if (mark.attrs.fontFamily) lastFf = mark.attrs.fontFamily as string;
+            }
           }
         }
-      }
-    });
+      });
+      if (!ocrFontSize   && lastFs) ocrFontSize   = lastFs;
+      if (!ocrFontFamily && lastFf) ocrFontFamily = lastFf;
+    }
 
     // 3) Final fallback
     if (!ocrFontSize) ocrFontSize = '12pt';
