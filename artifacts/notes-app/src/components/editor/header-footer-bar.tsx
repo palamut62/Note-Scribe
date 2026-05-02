@@ -18,15 +18,15 @@ interface Props {
 }
 
 const TOKENS = [
-  { label: '{sayfa}', title: 'Sayfa numarası', icon: Hash },
-  { label: '{tarih}', title: 'Bugünün tarihi', icon: Calendar },
-  { label: '{başlık}', title: 'Not başlığı', icon: FileText },
+  { label: '{sayfa}', title: 'Page number', icon: Hash },
+  { label: '{tarih}', title: "Today's date", icon: Calendar },
+  { label: '{başlık}', title: 'Note title', icon: FileText },
 ];
 
 const ALIGN_OPTS: { value: 'left' | 'center' | 'right'; icon: typeof AlignLeft; label: string }[] = [
-  { value: 'left',   icon: AlignLeft,   label: 'Sola hizala' },
-  { value: 'center', icon: AlignCenter, label: 'Ortala' },
-  { value: 'right',  icon: AlignRight,  label: 'Sağa hizala' },
+  { value: 'left',   icon: AlignLeft,   label: 'Align left' },
+  { value: 'center', icon: AlignCenter, label: 'Center' },
+  { value: 'right',  icon: AlignRight,  label: 'Align right' },
 ];
 
 function resolveTokens(text: string, title: string, page: number): string {
@@ -45,7 +45,6 @@ function normalizeZone(z: unknown): HFZone {
   return z as HFZone;
 }
 
-/** Default alignment per zone position */
 function defaultAlign(zone: 'left' | 'center' | 'right'): 'left' | 'center' | 'right' {
   return zone;
 }
@@ -101,8 +100,8 @@ interface ZoneEditorProps {
 function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const zoneLabel = zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ';
-  const typeLabel = type === 'header' ? 'Üst Bilgi' : 'Alt Bilgi';
+  const zoneLabel = zone === 'left' ? 'Left' : zone === 'center' ? 'Center' : 'Right';
+  const typeLabel = type === 'header' ? 'Header' : 'Footer';
   const currentAlign = data.align ?? defaultAlign(zone);
 
   useEffect(() => {
@@ -142,9 +141,9 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
       <div className="hf-editor-titlebar">
         <span className="hf-editor-title">
           <Type size={11} />
-          {typeLabel} — {zoneLabel} Bölge
+          {typeLabel} — {zoneLabel} Zone
         </span>
-        <button className="hf-editor-close" onClick={onClose} title="Kapat">
+        <button className="hf-editor-close" onClick={onClose} title="Close">
           <X size={12} />
         </button>
       </div>
@@ -152,7 +151,7 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
       <div className="hf-editor-body">
         {/* Alignment */}
         <div className="hf-editor-section">
-          <label className="hf-editor-label">Yatay Hizalama</label>
+          <label className="hf-editor-label">Alignment</label>
           <div className="hf-align-row">
             {ALIGN_OPTS.map(opt => (
               <button
@@ -170,13 +169,13 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
 
         {/* Text input */}
         <div className="hf-editor-section">
-          <label className="hf-editor-label">Metin</label>
+          <label className="hf-editor-label">Text</label>
           <input
             autoFocus
             className="hf-input"
             value={data.text || ''}
             onChange={e => onChange({ text: e.target.value })}
-            placeholder="Metin girin veya token ekleyin…"
+            placeholder="Enter text or insert a token…"
           />
           <div className="hf-token-row">
             {TOKENS.map(t => (
@@ -195,7 +194,7 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
 
         {/* Image / Logo */}
         <div className="hf-editor-section">
-          <label className="hf-editor-label">Logo / Resim</label>
+          <label className="hf-editor-label">Logo / Image</label>
           {data.image ? (
             <div className="hf-logo-preview-row">
               <img
@@ -206,27 +205,27 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
               />
               <div className="hf-logo-size-controls">
                 <span className="hf-editor-label" style={{ marginBottom: 0 }}>
-                  Yükseklik: {data.imageHeight ?? 28}px
+                  Height: {data.imageHeight ?? 28}px
                 </span>
                 <div className="hf-size-btns">
                   <button
                     className="hf-size-btn"
                     onMouseDown={e => { e.preventDefault(); onChange({ imageHeight: Math.min(80, (data.imageHeight ?? 28) + 4) }); }}
-                    title="Büyüt"
+                    title="Increase"
                   ><ChevronUp size={10} /></button>
                   <button
                     className="hf-size-btn"
                     onMouseDown={e => { e.preventDefault(); onChange({ imageHeight: Math.max(12, (data.imageHeight ?? 28) - 4) }); }}
-                    title="Küçült"
+                    title="Decrease"
                   ><ChevronDown size={10} /></button>
                 </div>
               </div>
               <button
                 className="hf-logo-remove-btn"
                 onMouseDown={e => { e.preventDefault(); onChange({ image: undefined }); }}
-                title="Resmi kaldır"
+                title="Remove image"
               >
-                <X size={11} /> Kaldır
+                <X size={11} /> Remove
               </button>
             </div>
           ) : (
@@ -235,7 +234,7 @@ function ZoneEditor({ zone, data, type, onClose, onChange }: ZoneEditorProps) {
               onMouseDown={e => { e.preventDefault(); imageInputRef.current?.click(); }}
             >
               <Upload size={11} />
-              Logo / Resim Yükle
+              Upload Logo / Image
             </button>
           )}
           <input
@@ -286,7 +285,7 @@ export function HeaderFooterBar({
           key={zone}
           className={`hf-zone hf-zone-${zone} ${activeZone === zone ? 'hf-zone-active' : ''}`}
           onClick={e => { e.stopPropagation(); setActiveZone(activeZone === zone ? null : zone); }}
-          title={`${zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ'} bölgeyi düzenle`}
+          title={`Edit ${zone} zone`}
         >
           {zoneHasContent(zoneData[zone])
             ? (
@@ -297,7 +296,7 @@ export function HeaderFooterBar({
                 pageNumber={pageNumber}
               />
             )
-            : <span className="hf-empty-hint">{zone === 'left' ? 'Sol' : zone === 'center' ? 'Orta' : 'Sağ'}</span>
+            : <span className="hf-empty-hint">{zone === 'left' ? 'Left' : zone === 'center' ? 'Center' : 'Right'}</span>
           }
         </div>
       ))}
@@ -328,9 +327,9 @@ export function HeaderFooterToggle({
     <button
       className={`hf-toggle-btn ${data.visible ? 'hf-toggle-active' : ''}`}
       onClick={() => onChange({ visible: !data.visible })}
-      title={`${type === 'header' ? 'Üst Bilgi' : 'Alt Bilgi'} ${data.visible ? 'gizle' : 'göster'}`}
+      title={`${type === 'header' ? 'Header' : 'Footer'} ${data.visible ? 'hide' : 'show'}`}
     >
-      {type === 'header' ? 'Üst Bilgi' : 'Alt Bilgi'}
+      {type === 'header' ? 'Header' : 'Footer'}
     </button>
   );
 }
