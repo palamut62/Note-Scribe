@@ -396,6 +396,20 @@ export function NoteEditor({ note }: Props) {
           onUndo={() => drawCanvasRef.current?.undo()}
           onClear={() => drawCanvasRef.current?.clear()}
           onExit={() => setDrawMode(false)}
+          onSavePng={async () => {
+            if (!pageRef.current) return;
+            const html2canvas = (await import('html2canvas')).default;
+            const canvas = await html2canvas(pageRef.current, {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff',
+              logging: false,
+            });
+            const link = document.createElement('a');
+            link.download = `${note.title || 'Not'}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+          }}
         />
       )}
 

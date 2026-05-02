@@ -1,4 +1,5 @@
-import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X } from 'lucide-react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X, GripVertical, ImageDown } from 'lucide-react';
 import type { DrawTool, Language } from '@/lib/types';
 import { makeT } from '@/lib/i18n';
 
@@ -13,6 +14,7 @@ interface Props {
   onUndo: () => void;
   onClear: () => void;
   onExit: () => void;
+  onSavePng: () => void;
 }
 
 const DRAW_COLORS = [
@@ -24,9 +26,47 @@ const DRAW_COLORS = [
 export function DrawingToolbar({
   tool, color, strokeWidth, language,
   onToolChange, onColorChange, onWidthChange,
-  onUndo, onClear, onExit,
+  onUndo, onClear, onExit, onSavePng,
 }: Props) {
   const t = makeT(language);
+
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    const w = panel?.offsetWidth ?? 172;
+    const h = panel?.offsetHeight ?? 420;
+    setPos({
+      x: window.innerWidth - w - 18,
+      y: Math.max(20, (window.innerHeight - h) / 2),
+    });
+  }, []);
+
+  const onDragMove = useCallback((e: PointerEvent) => {
+    if (!dragState.current) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+    setPos({
+      x: dragState.current.origX + dx,
+      y: dragState.current.origY + dy,
+    });
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    dragState.current = null;
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragEnd);
+  }, [onDragMove]);
+
+  const onDragStart = useCallback((e: React.PointerEvent) => {
+    if (!pos) return;
+    e.preventDefault();
+    dragState.current = { startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y };
+    window.addEventListener('pointermove', onDragMove);
+    window.addEventListener('pointerup', onDragEnd);
+  }, [pos, onDragMove, onDragEnd]);
 
   const tools: { id: DrawTool; icon: React.ReactNode; key: Parameters<typeof t>[0] }[] = [
     { id: 'pen',       icon: <Pencil      size={13} />, key: 'draw.pen'       },
@@ -44,11 +84,25 @@ export function DrawingToolbar({
     { value: 6,   key: 'draw.thick'  },
   ];
 
+  const style: React.CSSProperties = pos
+    ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', transform: 'none' }
+    : {};
+
   return (
-    <div className="drawing-toolbar">
-      <div className="drawing-tb-header">
+    <div className="drawing-toolbar" ref={panelRef} style={style}>
+      <div
+        className="drawing-tb-header"
+        onPointerDown={onDragStart}
+        style={{ cursor: 'grab' }}
+      >
+        <GripVertical size={11} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
         <span className="drawing-tb-title">✏️ {t('draw.mode')}</span>
-        <button className="drawing-tb-exit" onClick={onExit} title={t('draw.exit')}>
+        <button
+          className="drawing-tb-exit"
+          onPointerDown={e => e.stopPropagation()}
+          onClick={onExit}
+          title={t('draw.exit')}
+        >
           <X size={12} />
         </button>
       </div>
@@ -120,6 +174,10 @@ export function DrawingToolbar({
         <button className="drawing-action-btn" onClick={onUndo}>
           <Undo2 size={12} />
           {t('draw.undo')}
+        </button>
+        <button className="drawing-action-btn" onClick={onSavePng}>
+          <ImageDown size={12} />
+          {t('draw.savepng')}
         </button>
         <button className="drawing-action-btn drawing-action-danger" onClick={onClear}>
           <Trash2 size={12} />
