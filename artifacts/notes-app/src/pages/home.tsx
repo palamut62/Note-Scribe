@@ -1,16 +1,18 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '@/lib/app-state';
 import { TabBar } from '@/components/tab-bar';
 import { NoteEditor } from '@/components/editor/note-editor';
 import { SettingsDialog } from '@/components/settings-dialog';
+import { PrintPreview } from '@/components/print-preview';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Printer, FolderOpen } from 'lucide-react';
+import { Download, FileText, Printer, FolderOpen, Eye } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown } from '@/lib/export';
 
 export function Home() {
-  const { notes, activeNoteId, createNote, updateNote } = useApp();
+  const { notes, activeNoteId, createNote, updateNote, settings } = useApp();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
 
   const handleSaveTxt = () => {
     if (!activeNote) return;
@@ -20,10 +22,6 @@ export function Home() {
   const handleSaveMd = () => {
     if (!activeNote) return;
     downloadFile(`${activeNote.title || 'Untitled'}.md`, convertHtmlToMarkdown(activeNote.content), 'text/markdown');
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,9 +76,22 @@ export function Home() {
           >
             <Download className="h-3.5 w-3.5 mr-1" />.md
           </Button>
+
           <Button
             variant="ghost" size="sm"
-            onClick={handlePrint}
+            onClick={() => setShowPrintPreview(true)}
+            disabled={!activeNote}
+            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+            data-testid="button-print-preview"
+            title="Baskı önizleme"
+          >
+            <Eye className="h-3.5 w-3.5 mr-1" />
+            Önizle
+          </Button>
+
+          <Button
+            variant="ghost" size="sm"
+            onClick={() => window.print()}
             disabled={!activeNote}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
             data-testid="button-print"
@@ -110,6 +121,14 @@ export function Home() {
           </div>
         )}
       </div>
+
+      {showPrintPreview && activeNote && (
+        <PrintPreview
+          note={activeNote}
+          settings={settings}
+          onClose={() => setShowPrintPreview(false)}
+        />
+      )}
     </div>
   );
 }
