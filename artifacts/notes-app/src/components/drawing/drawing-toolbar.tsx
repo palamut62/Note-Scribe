@@ -1,12 +1,13 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Pencil, Minus, Square, Circle, ArrowRight, Eraser, Highlighter, Undo2, Trash2, X, GripVertical, ImageDown } from 'lucide-react';
-import type { DrawTool } from '@/lib/types';
+import type { DrawTool, Language } from '@/lib/types';
+import { makeT } from '@/lib/i18n';
 
 interface Props {
   tool: DrawTool;
   color: string;
   strokeWidth: number;
-  language?: string;
+  language: Language;
   onToolChange: (t: DrawTool) => void;
   onColorChange: (c: string) => void;
   onWidthChange: (w: number) => void;
@@ -22,27 +23,13 @@ const DRAW_COLORS = [
   '#ffffff', '#f9a8d4', '#bbf7d0', '#bfdbfe',
 ];
 
-const TOOLS: { id: DrawTool; icon: React.ReactNode; label: string }[] = [
-  { id: 'pen',       icon: <Pencil      size={13} />, label: 'Pen'        },
-  { id: 'highlight', icon: <Highlighter size={13} />, label: 'Highlighter'},
-  { id: 'line',      icon: <Minus       size={13} />, label: 'Line'       },
-  { id: 'arrow',     icon: <ArrowRight  size={13} />, label: 'Arrow'      },
-  { id: 'rect',      icon: <Square      size={13} />, label: 'Rectangle'  },
-  { id: 'ellipse',   icon: <Circle      size={13} />, label: 'Ellipse'    },
-  { id: 'eraser',    icon: <Eraser      size={13} />, label: 'Eraser'     },
-];
-
-const WIDTHS: { value: number; label: string }[] = [
-  { value: 1.5, label: 'Thin'   },
-  { value: 3,   label: 'Medium' },
-  { value: 6,   label: 'Thick'  },
-];
-
 export function DrawingToolbar({
-  tool, color, strokeWidth,
+  tool, color, strokeWidth, language,
   onToolChange, onColorChange, onWidthChange,
   onUndo, onClear, onExit, onSavePng,
 }: Props) {
+  const t = makeT(language);
+
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragState = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -78,6 +65,22 @@ export function DrawingToolbar({
     window.addEventListener('pointerup', onDragEnd);
   }, [pos, onDragMove, onDragEnd]);
 
+  const tools: { id: DrawTool; icon: React.ReactNode; key: Parameters<typeof t>[0] }[] = [
+    { id: 'pen',       icon: <Pencil      size={13} />, key: 'draw.pen'       },
+    { id: 'highlight', icon: <Highlighter size={13} />, key: 'draw.highlight' },
+    { id: 'line',      icon: <Minus       size={13} />, key: 'draw.line'      },
+    { id: 'arrow',     icon: <ArrowRight  size={13} />, key: 'draw.arrow'     },
+    { id: 'rect',      icon: <Square      size={13} />, key: 'draw.rect'      },
+    { id: 'ellipse',   icon: <Circle      size={13} />, key: 'draw.ellipse'   },
+    { id: 'eraser',    icon: <Eraser      size={13} />, key: 'draw.eraser'    },
+  ];
+
+  const widths: { value: number; key: Parameters<typeof t>[0] }[] = [
+    { value: 1.5, key: 'draw.thin'   },
+    { value: 3,   key: 'draw.medium' },
+    { value: 6,   key: 'draw.thick'  },
+  ];
+
   const style: React.CSSProperties = pos
     ? { position: 'fixed', left: pos.x, top: pos.y, right: 'auto', transform: 'none' }
     : {};
@@ -86,26 +89,26 @@ export function DrawingToolbar({
     <div className="drawing-toolbar" ref={panelRef} style={style}>
       <div className="drawing-tb-header" onPointerDown={onDragStart} style={{ cursor: 'grab' }}>
         <GripVertical size={11} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
-        <span className="drawing-tb-title">✏️ Drawing Mode</span>
+        <span className="drawing-tb-title">✏️ {t('draw.mode')}</span>
         <button
           className="drawing-tb-exit"
           onPointerDown={e => e.stopPropagation()}
           onClick={onExit}
-          title="Exit drawing"
+          title={t('draw.exit')}
         >
           <X size={12} />
         </button>
       </div>
 
       <div className="drawing-tb-section">
-        <div className="drawing-tb-label">Tool</div>
+        <div className="drawing-tb-label">{t('draw.tool')}</div>
         <div className="drawing-tools-grid">
-          {TOOLS.map(item => (
+          {tools.map(item => (
             <button
               key={item.id}
               className={`drawing-tool-btn${tool === item.id ? ' drawing-tool-active' : ''}`}
               onClick={() => onToolChange(item.id)}
-              title={item.label}
+              title={t(item.key)}
             >
               {item.icon}
             </button>
@@ -114,7 +117,7 @@ export function DrawingToolbar({
       </div>
 
       <div className="drawing-tb-section">
-        <div className="drawing-tb-label">Color</div>
+        <div className="drawing-tb-label">{t('draw.color')}</div>
         <div className="drawing-colors-grid">
           {DRAW_COLORS.map(c => (
             <button
@@ -134,14 +137,14 @@ export function DrawingToolbar({
       </div>
 
       <div className="drawing-tb-section">
-        <div className="drawing-tb-label">Width</div>
+        <div className="drawing-tb-label">{t('draw.width')}</div>
         <div className="drawing-widths">
-          {WIDTHS.map(w => (
+          {widths.map(w => (
             <button
               key={w.value}
               className={`drawing-width-btn${strokeWidth === w.value ? ' drawing-width-active' : ''}`}
               onClick={() => onWidthChange(w.value)}
-              title={w.label}
+              title={t(w.key)}
             >
               <span style={{
                 display: 'block',
@@ -158,15 +161,15 @@ export function DrawingToolbar({
       <div className="drawing-tb-actions">
         <button className="drawing-action-btn" onClick={onUndo}>
           <Undo2 size={12} />
-          Undo
+          {t('draw.undo')}
         </button>
         <button className="drawing-action-btn" onClick={onSavePng}>
           <ImageDown size={12} />
-          Save PNG
+          {t('draw.savepng')}
         </button>
         <button className="drawing-action-btn drawing-action-danger" onClick={onClear}>
           <Trash2 size={12} />
-          Clear all
+          {t('draw.clear')}
         </button>
       </div>
     </div>
