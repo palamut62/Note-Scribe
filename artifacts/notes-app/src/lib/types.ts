@@ -44,6 +44,7 @@ export interface Note {
   images: FloatingImage[];
   header: HeaderFooter;
   footer: HeaderFooter;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }

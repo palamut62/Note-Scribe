@@ -167,6 +167,24 @@ function PageOverlays({
   return <>{nodes}</>;
 }
 
+function SaveIndicator({ updatedAt }: { updatedAt: string }) {
+  const [visible, setVisible] = useState(false);
+  const prevRef = useRef(updatedAt);
+  useEffect(() => {
+    if (updatedAt !== prevRef.current) {
+      prevRef.current = updatedAt;
+      setVisible(true);
+      const t = setTimeout(() => setVisible(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [updatedAt]);
+  return (
+    <span className={`save-indicator ${visible ? 'save-indicator-show' : ''}`}>
+      Kaydedildi ✓
+    </span>
+  );
+}
+
 function countWords(text: string): number {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
 }
@@ -445,6 +463,7 @@ export function NoteEditor({ note }: Props) {
         <span>{wordCount} kelime</span>
         <span className="mx-2 opacity-40">·</span>
         <span>{charCount} karakter</span>
+        <SaveIndicator updatedAt={note.updatedAt} />
         <span className="ml-auto opacity-40 text-[10px] tracking-wide">v1.0.0</span>
       </div>
     </div>

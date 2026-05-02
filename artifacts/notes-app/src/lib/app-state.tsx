@@ -7,10 +7,11 @@ interface AppContextType {
   activeNoteId: string | null;
   settings: Settings;
   setActiveNoteId: (id: string | null) => void;
-  createNote: (initial?: { title?: string; content?: string }) => void;
+  createNote: (initial?: { title?: string; content?: string; tags?: string[] }) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   updateSettings: (updates: Partial<Settings>) => void;
+  reorderNotes: (fromIndex: number, toIndex: number) => void;
 }
 
 const defaultSettings: Settings = {
@@ -34,7 +35,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Note[]>(() => {
     try {
       const saved = localStorage.getItem('notlar-notes');
-      return saved ? JSON.parse(saved) : [];
+      if (!saved) return [];
+      const parsed: Note[] = JSON.parse(saved);
+      return parsed.map(n => ({ tags: [], ...n }));
     } catch {
       return [];
     }
@@ -69,13 +72,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.theme]);
 
-  const createNote = useCallback((initial?: { title?: string; content?: string }) => {
+  const createNote = useCallback((initial?: { title?: string; content?: string; tags?: string[] }) => {
     const newNote: Note = {
       id: crypto.randomUUID(),
       title: initial?.title || 'Untitled Note',
       content: initial?.content || '',
       textboxes: [],
       images: [],
+      tags: initial?.tags ?? [],
       header: { left: { text: '' }, center: { text: '' }, right: { text: '' }, visible: false },
       footer: { left: { text: '' }, center: { text: '{sayfa}' }, right: { text: '' }, visible: false },
       createdAt: new Date().toISOString(),
@@ -86,9 +90,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateNote = useCallback((id: string, updates: Partial<Note>) => {
-    setNotes(prev => prev.map(note => 
-      note.id === id 
-        ? { ...note, ...updates, updatedAt: new Date().toISOString() } 
+    setNotes(prev => prev.map(note =>
+      note.id === id
+        ? { ...note, ...updates, updatedAt: new Date().toISOString() }
         : note
     ));
   }, []);
@@ -104,6 +108,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSettings(prev => ({ ...prev, ...updates }));
   }, []);
 
+  const reorderNotes = useCallback((fromIndex: number, toIndex: number) => {
+    setNotes(prev => {
+      const arr = [...prev];
+      const [moved] = arr.splice(fromIndex, 1);
+      arr.splice(toIndex, 0, moved);
+      return arr;
+    });
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -115,6 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updateNote,
         deleteNote,
         updateSettings,
+        reorderNotes,
       }}
     >
       {children}

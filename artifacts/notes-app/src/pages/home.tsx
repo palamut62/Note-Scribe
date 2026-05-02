@@ -1,18 +1,40 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-state';
 import { TabBar } from '@/components/tab-bar';
 import { NoteEditor } from '@/components/editor/note-editor';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { PrintPreview } from '@/components/print-preview';
+import { TagBar } from '@/components/tag-bar';
+import { ClipboardHistoryBtn, useClipboardHistory } from '@/components/clipboard-history';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Printer, FolderOpen, Eye } from 'lucide-react';
-import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown } from '@/lib/export';
+import {
+  Download, FileText, Printer, FolderOpen, Eye,
+  FileDown, Link, Filter,
+} from 'lucide-react';
+import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
 
 export function Home() {
   const { notes, activeNoteId, createNote, updateNote, settings } = useApp();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [filterTag, setFilterTag] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
+  const clipboardHistory = useClipboardHistory();
+
+  const allTags = Array.from(new Set(notes.flatMap(n => n.tags ?? [])));
+  const visibleNotes = filterTag ? notes.filter(n => (n.tags ?? []).includes(filterTag)) : notes;
+
+  useEffect(() => {
+    const shared = parseShareUrl();
+    if (shared) {
+      const confirmed = window.confirm(`"${shared.title || 'Paylaşılan Not'}" notunu içe aktarmak istiyor musunuz?`);
+      if (confirmed) {
+        createNote({ title: shared.title, content: shared.content, tags: shared.tags });
+      }
+      window.location.hash = '';
+    }
+  }, []);
 
   const handleSaveTxt = () => {
     if (!activeNote) return;
@@ -22,6 +44,11 @@ export function Home() {
   const handleSaveMd = () => {
     if (!activeNote) return;
     downloadFile(`${activeNote.title || 'Untitled'}.md`, convertHtmlToMarkdown(activeNote.content), 'text/markdown');
+  };
+
+  const handleSaveDocx = async () => {
+    if (!activeNote) return;
+    await exportDocx(activeNote);
   };
 
   const handleOpenFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +68,14 @@ export function Home() {
     e.target.value = '';
   };
 
+  const handleShare = async () => {
+    if (!activeNote) return;
+    const url = noteToShareUrl(activeNote);
+    await navigator.clipboard.writeText(url);
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
+  };
+
   return (
     <div className="app-root">
       <div className="app-menubar">
@@ -50,11 +85,9 @@ export function Home() {
             variant="ghost" size="sm"
             onClick={() => fileInputRef.current?.click()}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-open-file"
             title="Dosya Aç"
           >
-            <FolderOpen className="h-3.5 w-3.5 mr-1" />
-            Aç
+            <FolderOpen className="h-3.5 w-3.5 mr-1" />Aç
           </Button>
           <input ref={fileInputRef} type="file" accept=".txt,.md" className="hidden" onChange={handleOpenFile} />
 
@@ -63,7 +96,6 @@ export function Home() {
             onClick={handleSaveTxt}
             disabled={!activeNote}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-save-txt"
           >
             <FileText className="h-3.5 w-3.5 mr-1" />.txt
           </Button>
@@ -72,9 +104,28 @@ export function Home() {
             onClick={handleSaveMd}
             disabled={!activeNote}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-save-md"
           >
             <Download className="h-3.5 w-3.5 mr-1" />.md
+          </Button>
+          <Button
+            variant="ghost" size="sm"
+            onClick={handleSaveDocx}
+            disabled={!activeNote}
+            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+            title="Word belgesi olarak indir"
+          >
+            <FileDown className="h-3.5 w-3.5 mr-1" />.docx
+          </Button>
+
+          <Button
+            variant="ghost" size="sm"
+            onClick={handleShare}
+            disabled={!activeNote}
+            className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+            title="Not bağlantısını kopyala"
+          >
+            <Link className="h-3.5 w-3.5 mr-1" />
+            {shareCopied ? 'Kopyalandı!' : 'Paylaş'}
           </Button>
 
           <Button
@@ -82,11 +133,9 @@ export function Home() {
             onClick={() => setShowPrintPreview(true)}
             disabled={!activeNote}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-print-preview"
             title="Baskı önizleme"
           >
-            <Eye className="h-3.5 w-3.5 mr-1" />
-            Önizle
+            <Eye className="h-3.5 w-3.5 mr-1" />Önizle
           </Button>
 
           <Button
@@ -94,12 +143,12 @@ export function Home() {
             onClick={() => window.print()}
             disabled={!activeNote}
             className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-            data-testid="button-print"
             title="Yazdır / PDF olarak kaydet"
           >
-            <Printer className="h-3.5 w-3.5 mr-1" />
-            PDF
+            <Printer className="h-3.5 w-3.5 mr-1" />PDF
           </Button>
+
+          <ClipboardHistoryBtn history={clipboardHistory} />
 
           <div className="w-px h-4 bg-border mx-1" />
           <SettingsDialog />
@@ -108,15 +157,47 @@ export function Home() {
 
       <TabBar />
 
+      {/* Tag bar — tag filter + active note tags */}
+      {(allTags.length > 0 || activeNote) && (
+        <div className="global-tag-bar">
+          {allTags.length > 0 && (
+            <div className="global-tag-filter">
+              <Filter size={11} className="opacity-50" />
+              {allTags.map(tag => (
+                <button
+                  key={tag}
+                  className={`gtag-btn ${filterTag === tag ? 'gtag-active' : ''}`}
+                  style={filterTag === tag ? { background: tagColor(tag) + '22', color: tagColor(tag), borderColor: tagColor(tag) } : {}}
+                  onClick={() => setFilterTag(prev => prev === tag ? null : tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
+          {activeNote && (
+            <TagBar
+              noteId={activeNote.id}
+              tags={activeNote.tags ?? []}
+              filterTag={filterTag}
+              onFilterTag={setFilterTag}
+              allTags={allTags}
+            />
+          )}
+        </div>
+      )}
+
       <div className="app-editor-area">
-        {activeNote ? (
+        {activeNote && visibleNotes.some(n => n.id === activeNoteId) ? (
           <NoteEditor note={activeNote} />
         ) : (
           <div className="app-empty-state">
             <p>
-              {notes.length === 0
-                ? 'Yeni not oluşturmak için + butonuna tıklayın.'
-                : 'Bir sekme seçin veya yeni not oluşturun.'}
+              {filterTag
+                ? `"#${filterTag}" etiketli not bulunamadı.`
+                : notes.length === 0
+                  ? 'Yeni not oluşturmak için + butonuna tıklayın.'
+                  : 'Bir sekme seçin veya yeni not oluşturun.'}
             </p>
           </div>
         )}
@@ -131,4 +212,14 @@ export function Home() {
       )}
     </div>
   );
+}
+
+function tagColor(tag: string): string {
+  const TAG_COLORS = [
+    '#ef4444','#f97316','#eab308','#22c55e',
+    '#06b6d4','#3b82f6','#8b5cf6','#ec4899',
+  ];
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) & 0xffff;
+  return TAG_COLORS[h % TAG_COLORS.length];
 }
