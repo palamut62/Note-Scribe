@@ -188,6 +188,8 @@ export function NoteEditor({ note }: Props) {
               style={{
                 top: settings.marginTop ?? 80,
                 bottom: settings.marginBottom ?? 120,
+                left: settings.marginLeft ?? 80,
+                right: settings.marginRight ?? 80,
               }}
             />
           )}
