@@ -251,19 +251,27 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           .map(l => `<p><span style="font-size: 12pt">${escape(l)}</span></p>`)
           .join('');
 
-        // Move cursor to end of last content node, then insert OCR lines
-        const doc = editor.state.doc;
-        let lastContentPos = doc.content.size;
-        doc.descendants((node, pos) => {
-          if (node.isTextblock && node.textContent.trim().length > 0) {
-            lastContentPos = pos + node.nodeSize;
-          }
-        });
+        // Insert at current cursor position if inside the document,
+        // otherwise fall back to the end of the last content node.
+        const { state } = editor;
+        const cursorPos = state.selection.from;
+        const docSize   = state.doc.content.size;
+
+        // If cursor is at a valid inner position (not at doc boundaries), use it.
+        // Otherwise find the end of the last text node with content.
+        let insertAt = (cursorPos > 0 && cursorPos < docSize) ? cursorPos : docSize;
+        if (insertAt === docSize) {
+          state.doc.descendants((node, pos) => {
+            if (node.isTextblock && node.textContent.trim().length > 0) {
+              insertAt = pos + node.nodeSize - 1; // just before the closing tag
+            }
+          });
+        }
 
         editor
           .chain()
           .focus()
-          .setTextSelection(lastContentPos)
+          .setTextSelection(insertAt)
           .insertContent(contentHtml)
           .run();
 
