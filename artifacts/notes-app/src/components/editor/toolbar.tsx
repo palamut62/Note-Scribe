@@ -264,6 +264,30 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       return;
     }
 
+    // ── Detect font SYNCHRONOUSLY at click time ─────────────────────────────
+    // 1) Start with TipTap's own cursor-context attributes (most reliable)
+    const cursorStyle = editor.getAttributes('textStyle');
+    let ocrFontSize   = (cursorStyle.fontSize   as string) || '';
+    let ocrFontFamily = (cursorStyle.fontFamily  as string) || '';
+
+    // 2) Walk ALL text nodes to find the last explicit textStyle mark.
+    //    This covers the case where the cursor is in an empty paragraph
+    //    but the rest of the document has styled text.
+    editor.state.doc.descendants((node) => {
+      if (node.isText) {
+        for (const mark of node.marks) {
+          if (mark.type.name === 'textStyle') {
+            if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize  as string;
+            if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily as string;
+          }
+        }
+      }
+    });
+
+    // 3) Final fallback
+    if (!ocrFontSize) ocrFontSize = '12pt';
+    // ────────────────────────────────────────────────────────────────────────
+
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -275,35 +299,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           return;
         }
 
-        // Build HTML: skip blank lines, inherit font-family and font-size from last text node
+        // Build HTML: skip blank lines, apply captured font
         const lines = text.split('\n').filter(l => l.trim() !== '');
         const escape = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-        // Detect font style from the last text node in the doc (or cursor position)
-        let ocrFontSize   = '12pt';
-        let ocrFontFamily = '';
-        const { state: stateForFont } = editor;
-        // Walk all text nodes and keep the last seen textStyle attrs
-        stateForFont.doc.descendants((node) => {
-          if (node.isText) {
-            for (const mark of node.marks) {
-              if (mark.type.name === 'textStyle') {
-                if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize;
-                if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily;
-              }
-            }
-          }
-        });
-        // Also check marks at current cursor position (overrides if set)
-        const clamped = Math.min(stateForFont.selection.from, stateForFont.doc.content.size - 1);
-        if (clamped > 0) {
-          for (const mark of stateForFont.doc.resolve(clamped).marks()) {
-            if (mark.type.name === 'textStyle') {
-              if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize;
-              if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily;
-            }
-          }
-        }
 
         const spanStyle = [
           `font-size: ${ocrFontSize}`,
