@@ -621,20 +621,21 @@
 
 .bg-pattern-lines {
   background-image: repeating-linear-gradient(
-    transparent, transparent 27px,
-    var(--pattern-line) 27px, var(--pattern-line) 28px
+    var(--pattern-line), var(--pattern-line) 1px,
+    transparent 1px, transparent 28px
   );
 }
 
 .bg-pattern-grid {
   background-image:
     repeating-linear-gradient(
-      transparent, transparent 27px,
-      var(--pattern-line) 27px, var(--pattern-line) 28px
+      var(--pattern-line), var(--pattern-line) 1px,
+      transparent 1px, transparent 28px
     ),
     repeating-linear-gradient(
-      90deg, transparent, transparent 27px,
-      var(--pattern-line) 27px, var(--pattern-line) 28px
+      90deg,
+      var(--pattern-line), var(--pattern-line) 1px,
+      transparent 1px, transparent 28px
     );
 }
 
@@ -647,20 +648,21 @@
 /* Print-preview pattern overlays (always light theme) */
 .pp-pattern-lines {
   background-image: repeating-linear-gradient(
-    transparent, transparent 27px,
-    rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+    rgba(0,0,0,0.10), rgba(0,0,0,0.10) 1px,
+    transparent 1px, transparent 28px
   );
 }
 
 .pp-pattern-grid {
   background-image:
     repeating-linear-gradient(
-      transparent, transparent 27px,
-      rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+      rgba(0,0,0,0.10), rgba(0,0,0,0.10) 1px,
+      transparent 1px, transparent 28px
     ),
     repeating-linear-gradient(
-      90deg, transparent, transparent 27px,
-      rgba(0,0,0,0.10) 27px, rgba(0,0,0,0.10) 28px
+      90deg,
+      rgba(0,0,0,0.10), rgba(0,0,0,0.10) 1px,
+      transparent 1px, transparent 28px
     );
 }
 

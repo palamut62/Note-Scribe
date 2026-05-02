@@ -244,11 +244,43 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           return;
         }
 
-        // Build HTML: skip blank lines, insert each line at 12pt as plain paragraph
+        // Build HTML: skip blank lines, inherit font-family and font-size from last text node
         const lines = text.split('\n').filter(l => l.trim() !== '');
         const escape = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+        // Detect font style from the last text node in the doc (or cursor position)
+        let ocrFontSize   = '12pt';
+        let ocrFontFamily = '';
+        const { state: stateForFont } = editor;
+        // Walk all text nodes and keep the last seen textStyle attrs
+        stateForFont.doc.descendants((node) => {
+          if (node.isText) {
+            for (const mark of node.marks) {
+              if (mark.type.name === 'textStyle') {
+                if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize;
+                if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily;
+              }
+            }
+          }
+        });
+        // Also check marks at current cursor position (overrides if set)
+        const clamped = Math.min(state.selection.from, stateForFont.doc.content.size - 1);
+        if (clamped > 0) {
+          for (const mark of stateForFont.doc.resolve(clamped).marks()) {
+            if (mark.type.name === 'textStyle') {
+              if (mark.attrs.fontSize)   ocrFontSize   = mark.attrs.fontSize;
+              if (mark.attrs.fontFamily) ocrFontFamily = mark.attrs.fontFamily;
+            }
+          }
+        }
+
+        const spanStyle = [
+          `font-size: ${ocrFontSize}`,
+          ocrFontFamily ? `font-family: ${ocrFontFamily}` : '',
+        ].filter(Boolean).join('; ');
+
         const contentHtml = lines
-          .map(l => `<p><span style="font-size: 12pt">${escape(l)}</span></p>`)
+          .map(l => `<p><span style="${spanStyle}">${escape(l)}</span></p>`)
           .join('');
 
         // Insert at current cursor position if inside the document,
