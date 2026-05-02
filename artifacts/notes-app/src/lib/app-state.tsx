@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Note, Settings, TextBox } from './types';
+import { Note, Settings } from './types';
 
 interface AppContextType {
   notes: Note[];
@@ -56,6 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       title: 'Untitled Note',
       content: '',
       textboxes: [],
+      images: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

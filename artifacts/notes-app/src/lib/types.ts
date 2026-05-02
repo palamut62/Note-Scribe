@@ -12,11 +12,22 @@ export interface TextBox {
   fontSize: number;
 }
 
+export interface FloatingImage {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  src: string;
+  alt: string;
+}
+
 export interface Note {
   id: string;
   title: string;
   content: string;
   textboxes: TextBox[];
+  images: FloatingImage[];
   createdAt: string;
   updatedAt: string;
 }

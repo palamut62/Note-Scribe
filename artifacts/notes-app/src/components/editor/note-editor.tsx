@@ -11,12 +11,12 @@ import TaskItem from '@tiptap/extension-task-item';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
-import { Image } from '@tiptap/extension-image';
 import { Link } from '@tiptap/extension-link';
-import { Note, TextBox } from '@/lib/types';
+import { Note, TextBox, FloatingImage } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { EditorToolbar } from './toolbar';
 import { FloatingTextbox } from '../floating-textbox';
+import { FloatingImage as FloatingImageComponent } from '../floating-image';
 import { FindReplace } from './find-replace';
 
 interface Props {
@@ -30,6 +30,7 @@ function countWords(text: string): number {
 export function NoteEditor({ note }: Props) {
   const { updateNote, settings } = useApp();
   const [activeTextboxId, setActiveTextboxId] = useState<string | null>(null);
+  const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [charCount, setCharCount] = useState(0);
@@ -50,7 +51,6 @@ export function NoteEditor({ note }: Props) {
       TableRow,
       TableHeader,
       TableCell,
-      Image.configure({ inline: false, allowBase64: true }),
       Link.configure({ openOnClick: false, autolink: true }),
     ],
     content: note.content,
@@ -117,6 +117,21 @@ export function NoteEditor({ note }: Props) {
     setActiveTextboxId(newTb.id);
   };
 
+  const handleAddImage = useCallback((src: string, alt: string) => {
+    const newImg: FloatingImage = {
+      id: crypto.randomUUID(),
+      x: 80,
+      y: 80,
+      width: 320,
+      height: 240,
+      src,
+      alt,
+    };
+    const currentImages = note.images ?? [];
+    updateNote(note.id, { images: [...currentImages, newImg] });
+    setActiveImageId(newImg.id);
+  }, [note.id, note.images, updateNote]);
+
   const updateTextbox = (tbId: string, updates: Partial<TextBox>) => {
     const newTextboxes = note.textboxes.map(tb =>
       tb.id === tbId ? { ...tb, ...updates } : tb
@@ -128,6 +143,18 @@ export function NoteEditor({ note }: Props) {
     updateNote(note.id, { textboxes: note.textboxes.filter(tb => tb.id !== tbId) });
   };
 
+  const updateImage = (imgId: string, updates: Partial<FloatingImage>) => {
+    const currentImages = note.images ?? [];
+    updateNote(note.id, {
+      images: currentImages.map(img => img.id === imgId ? { ...img, ...updates } : img),
+    });
+  };
+
+  const deleteImage = (imgId: string) => {
+    const currentImages = note.images ?? [];
+    updateNote(note.id, { images: currentImages.filter(img => img.id !== imgId) });
+  };
+
   const bgClass =
     settings.backgroundPattern === 'lines'
       ? 'bg-pattern-lines'
@@ -135,11 +162,17 @@ export function NoteEditor({ note }: Props) {
       ? 'bg-pattern-grid'
       : '';
 
+  const handlePageClick = () => {
+    setActiveTextboxId(null);
+    setActiveImageId(null);
+  };
+
   return (
     <div className="editor-shell">
       <EditorToolbar
         editor={editor}
         onAddTextbox={handleAddTextbox}
+        onAddImage={handleAddImage}
         onToggleFindReplace={() => setShowFindReplace(v => !v)}
       />
 
@@ -147,7 +180,7 @@ export function NoteEditor({ note }: Props) {
         <FindReplace editor={editor} onClose={() => setShowFindReplace(false)} />
       )}
 
-      <div className="editor-scroll" onClick={() => setActiveTextboxId(null)}>
+      <div className="editor-scroll" onClick={handlePageClick}>
         <div className={`editor-page ${bgClass}`}>
           {note.textboxes.map(tb => (
             <FloatingTextbox
@@ -156,7 +189,17 @@ export function NoteEditor({ note }: Props) {
               onChange={updateTextbox}
               onDelete={deleteTextbox}
               isActive={activeTextboxId === tb.id}
-              onFocus={() => setActiveTextboxId(tb.id)}
+              onFocus={() => { setActiveTextboxId(tb.id); setActiveImageId(null); }}
+            />
+          ))}
+          {(note.images ?? []).map(img => (
+            <FloatingImageComponent
+              key={img.id}
+              image={img}
+              onChange={updateImage}
+              onDelete={deleteImage}
+              isActive={activeImageId === img.id}
+              onFocus={() => { setActiveImageId(img.id); setActiveTextboxId(null); }}
             />
           ))}
           <div className="editor-content-area">
