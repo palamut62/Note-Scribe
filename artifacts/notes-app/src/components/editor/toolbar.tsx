@@ -8,7 +8,7 @@ import {
   Quote, Minus, CalendarDays, LayoutTemplate,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
 import { fixText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
@@ -200,15 +200,45 @@ export function EditorToolbar({ editor, note, onAddTextbox, onAddImage, onToggle
           value={editor.getAttributes('textStyle').fontFamily || 'Inter'}
           onValueChange={val => editor.chain().focus().setFontFamily(val).run()}
         >
-          <SelectTrigger className="h-7 w-[110px] text-xs">
+          <SelectTrigger className="h-7 w-[140px] text-xs font-selector-trigger">
             <SelectValue placeholder="Font" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Inter">Sans Serif</SelectItem>
-            <SelectItem value="Georgia">Serif</SelectItem>
-            <SelectItem value="Menlo">Monospace</SelectItem>
-            <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-            <SelectItem value="Arial">Arial</SelectItem>
+          <SelectContent className="max-h-[320px] overflow-y-auto font-selector-content">
+            <SelectGroup>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Sans Serif</SelectLabel>
+              <SelectItem value="Inter" style={{ fontFamily: 'Inter' }}>Inter</SelectItem>
+              <SelectItem value="Roboto" style={{ fontFamily: 'Roboto' }}>Roboto</SelectItem>
+              <SelectItem value="Open Sans" style={{ fontFamily: '"Open Sans"' }}>Open Sans</SelectItem>
+              <SelectItem value="Lato" style={{ fontFamily: 'Lato' }}>Lato</SelectItem>
+              <SelectItem value="Poppins" style={{ fontFamily: 'Poppins' }}>Poppins</SelectItem>
+              <SelectItem value="Nunito" style={{ fontFamily: 'Nunito' }}>Nunito</SelectItem>
+              <SelectItem value="Raleway" style={{ fontFamily: 'Raleway' }}>Raleway</SelectItem>
+              <SelectItem value="Montserrat" style={{ fontFamily: 'Montserrat' }}>Montserrat</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Serif</SelectLabel>
+              <SelectItem value="Playfair Display" style={{ fontFamily: '"Playfair Display"' }}>Playfair Display</SelectItem>
+              <SelectItem value="Merriweather" style={{ fontFamily: 'Merriweather' }}>Merriweather</SelectItem>
+              <SelectItem value="Lora" style={{ fontFamily: 'Lora' }}>Lora</SelectItem>
+              <SelectItem value="Libre Baskerville" style={{ fontFamily: '"Libre Baskerville"' }}>Libre Baskerville</SelectItem>
+              <SelectItem value="Crimson Text" style={{ fontFamily: '"Crimson Text"' }}>Crimson Text</SelectItem>
+              <SelectItem value="IBM Plex Serif" style={{ fontFamily: '"IBM Plex Serif"' }}>IBM Plex Serif</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Daktilo</SelectLabel>
+              <SelectItem value="Special Elite" style={{ fontFamily: '"Special Elite"' }}>Special Elite</SelectItem>
+              <SelectItem value="Courier Prime" style={{ fontFamily: '"Courier Prime"' }}>Courier Prime</SelectItem>
+              <SelectItem value="Cutive Mono" style={{ fontFamily: '"Cutive Mono"' }}>Cutive Mono</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel className="text-[10px] uppercase tracking-widest text-muted-foreground px-2 py-1">Geliştirici</SelectLabel>
+              <SelectItem value="JetBrains Mono" style={{ fontFamily: '"JetBrains Mono"' }}>JetBrains Mono</SelectItem>
+              <SelectItem value="Fira Code" style={{ fontFamily: '"Fira Code"' }}>Fira Code</SelectItem>
+              <SelectItem value="Source Code Pro" style={{ fontFamily: '"Source Code Pro"' }}>Source Code Pro</SelectItem>
+              <SelectItem value="Roboto Mono" style={{ fontFamily: '"Roboto Mono"' }}>Roboto Mono</SelectItem>
+              <SelectItem value="Space Mono" style={{ fontFamily: '"Space Mono"' }}>Space Mono</SelectItem>
+              <SelectItem value="IBM Plex Mono" style={{ fontFamily: '"IBM Plex Mono"' }}>IBM Plex Mono</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
 
