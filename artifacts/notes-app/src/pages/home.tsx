@@ -246,6 +246,10 @@ export function Home() {
                           onPointerDown={e => {
                             e.preventDefault();
                             e.stopPropagation();
+                          }}
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             togglePin(id as PinnableActionId);
                           }}
                         >

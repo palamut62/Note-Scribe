@@ -501,7 +501,6 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           title="Toggle drawing mode"
         >
           <Pencil className="h-3.5 w-3.5" />
-          <span>Draw</span>
         </Button>
 
         <div className="flex-1" />
