@@ -244,18 +244,16 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           return;
         }
 
-        // Build HTML: blank lines become empty <p>, other lines become <p>text</p>
-        const lines = text.split('\n');
+        // Build HTML: skip blank lines, insert each line at 12pt as plain paragraph
+        const lines = text.split('\n').filter(l => l.trim() !== '');
+        const escape = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const contentHtml = lines
-          .map(l => l.trim() === '' ? '<p></p>' : `<p>${l.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>`)
+          .map(l => `<p><span style="font-size: 12pt">${escape(l)}</span></p>`)
           .join('');
 
-        // Move cursor to end of document, then insert a separator blank line + the OCR content
+        // Move cursor to end of last content node, then insert OCR lines
         const doc = editor.state.doc;
-        const end = doc.content.size;
-
-        // Find the last node that actually has text
-        let lastContentPos = end;
+        let lastContentPos = doc.content.size;
         doc.descendants((node, pos) => {
           if (node.isTextblock && node.textContent.trim().length > 0) {
             lastContentPos = pos + node.nodeSize;
@@ -266,7 +264,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           .chain()
           .focus()
           .setTextSelection(lastContentPos)
-          .insertContent('<p></p>' + contentHtml)
+          .insertContent(contentHtml)
           .run();
 
         const lineCount = lines.filter(l => l.trim()).length;
