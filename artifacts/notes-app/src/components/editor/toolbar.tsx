@@ -5,12 +5,12 @@ import {
   List, ListOrdered, CheckSquare,
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
-  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages, Pencil,
+  Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages, Pencil, ScanText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
-import { fixText, translateToTurkish } from '@/lib/ai';
+import { fixText, translateToTurkish, ocrImage } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
 import { Note, HeaderFooter, HFZone } from '@/lib/types';
@@ -97,7 +97,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isOcring, setIsOcring] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const ocrInputRef = useRef<HTMLInputElement>(null);
 
   if (!editor) return null;
 
@@ -218,6 +220,40 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     } finally {
       setIsTranslating(false);
     }
+  };
+
+  const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    const apiKey = settings.nvidiaApiKey;
+    if (!apiKey) {
+      toast({ title: 'NVIDIA API Key Required', description: 'Add your NVIDIA API key in Settings to use OCR.', variant: 'destructive' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setIsOcring(true);
+      try {
+        const text = await ocrImage(dataUrl, apiKey);
+        if (!text) {
+          toast({ title: 'No text found', description: 'No text could be extracted from the image.', variant: 'destructive' });
+          return;
+        }
+        const lines = text.split('\n');
+        const html = lines.map(l => `<p>${l.trim() || '<br>'}</p>`).join('');
+        editor.chain().focus().insertContent(html).run();
+        toast({ title: 'OCR complete', description: `Extracted ${lines.filter(l => l.trim()).length} lines of text.` });
+      } catch (err: any) {
+        toast({ title: 'OCR failed', description: err.message || 'Could not extract text.', variant: 'destructive' });
+      } finally {
+        setIsOcring(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleInsertLink = () => {
@@ -414,6 +450,17 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           <ImageIcon className="h-3.5 w-3.5" />
         </Button>
         <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`tbtn ${isOcring ? 'opacity-60' : ''}`}
+          onClick={() => ocrInputRef.current?.click()}
+          disabled={isOcring}
+          title="OCR — extract text from image (NVIDIA VIM)"
+        >
+          <ScanText className={`h-3.5 w-3.5 ${isOcring ? 'animate-pulse' : ''}`} />
+        </Button>
+        <input ref={ocrInputRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={handleOcrUpload} />
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertTable} title="Add table">
           <TableIcon className="h-3.5 w-3.5" />
         </Button>

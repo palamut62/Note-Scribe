@@ -1,5 +1,55 @@
 const PROXY_BASE = '/api/ai-proxy';
 
+// Best NVIDIA NIM vision model for OCR
+const OCR_MODEL = 'nvidia/llama-3.2-11b-vision-instruct';
+
+export async function ocrImage(
+  imageDataUrl: string,
+  apiKey: string,
+): Promise<string> {
+  if (!apiKey) throw new Error('NVIDIA API key required');
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=nvidia`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: OCR_MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Extract all text from this image exactly as it appears. Return only the extracted text, preserving line breaks and paragraph structure. Do not add any commentary, explanation, or formatting markers.',
+            },
+            {
+              type: 'image_url',
+              image_url: { url: imageDataUrl },
+            },
+          ],
+        },
+      ],
+      max_tokens: 2048,
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
+    throw new Error(`OCR Error (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  return (data.choices?.[0]?.message?.content || '').trim();
+}
+
 export async function fixText(
   text: string,
   provider: 'openrouter' | 'nvidia',
