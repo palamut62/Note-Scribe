@@ -84,13 +84,14 @@ function HFPageOverlay({
 
 function PageOverlays({
   pageRef, header, footer, noteTitle,
-  marginLeft, marginRight, marginTop, marginBottom, showBorder,
+  marginLeft, marginRight, marginTop, marginBottom, showBorder, bgClass,
 }: {
   pageRef: React.RefObject<HTMLDivElement>;
   header: HeaderFooter; footer: HeaderFooter;
   noteTitle: string;
   marginLeft: number; marginRight: number; marginTop: number; marginBottom: number;
   showBorder: boolean;
+  bgClass?: string;
 }) {
   const [totalH, setTotalH] = useState(PAGE_H);
   useEffect(() => {
@@ -140,6 +141,18 @@ function PageOverlays({
         height={marginBottom} type="footer" pageTop={pageTop}
       />
     );
+    if (bgClass) {
+      nodes.push(
+        <div key={`pat-${i}`}
+          className={`page-pattern-overlay ${bgClass}`}
+          style={{
+            top: pageTop + marginTop,
+            height: PAGE_H - marginTop - marginBottom,
+            left: marginLeft, right: marginRight,
+          }}
+        />
+      );
+    }
     if (showBorder) {
       nodes.push(
         <div key={`border-${i}`} style={{
@@ -356,13 +369,14 @@ export function NoteEditor({ note }: Props) {
             marginTop={settings.marginTop ?? 80}
             marginBottom={settings.marginBottom ?? 120}
             showBorder={!!bgClass}
+            bgClass={bgClass || undefined}
           />
           {bgClass && (
             <div
               className={`page-pattern-overlay ${bgClass}`}
               style={{
-                top: 0,
-                bottom: 0,
+                top: settings.marginTop ?? 80,
+                height: PAGE_H - (settings.marginTop ?? 80) - (settings.marginBottom ?? 120),
                 left: settings.marginLeft ?? 80,
                 right: settings.marginRight ?? 80,
               }}
