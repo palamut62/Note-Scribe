@@ -1387,6 +1387,18 @@ ul[data-type="taskList"] li > div {
     margin: 0 !important;
     background: white !important;
   }
+
+  /* ── Hide header/footer separator borders ── */
+  .pp-header,
+  .pp-footer {
+    border: none !important;
+  }
+
+  /* ── Hide editor-view header/footer dashed borders ── */
+  .hf-bar-header,
+  .hf-bar-footer {
+    border: none !important;
+  }
 }
 
 /* ─── Case transform dropdown ─────────────────────────────────────────────── */
