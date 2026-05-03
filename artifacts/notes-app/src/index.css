@@ -558,7 +558,7 @@
   left: 0;
   right: 0;
   height: 23px;           /* 1px top-border + 20px gap + 1px bottom-border + 1px extra */
-  background: hsl(var(--muted) / 0.85);
+  background: hsl(var(--muted));
   pointer-events: none;
   z-index: 10;
 }
