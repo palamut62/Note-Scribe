@@ -2867,10 +2867,6 @@ ul[data-type="taskList"] li > div {
     display: none;
   }
 
-  /* ── Note items: show context menu on tap ── */
-  .group .opacity-0 {
-    opacity: 1 !important;
-  }
 
   /* ── Spacing & callout dropdowns ── */
   .color-swatch-popup {

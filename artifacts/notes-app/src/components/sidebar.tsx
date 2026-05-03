@@ -554,7 +554,7 @@ export function Sidebar() {
                       setActiveNoteId(note.id);
                     }
                   }}
-                  className={`group relative flex items-start gap-2 p-2.5 rounded-md cursor-pointer transition-colors ${
+                  className={`group flex items-center gap-1.5 px-2 py-2 rounded-md cursor-pointer transition-colors ${
                     draggingNoteId === note.id
                       ? 'opacity-40'
                       : !selectMode && activeNoteId === note.id
@@ -569,7 +569,7 @@ export function Sidebar() {
                   }}
                 >
                   {selectMode && (
-                    <div className="shrink-0 mt-0.5">
+                    <div className="shrink-0">
                       <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-colors ${
                         selectedIds.has(note.id) ? 'bg-primary border-primary' : 'border-sidebar-foreground/30'
                       }`}>
@@ -579,14 +579,12 @@ export function Sidebar() {
                   )}
 
                   <div className="flex-1 min-w-0">
-                    {note.isPinned && (
-                      <Pin className="absolute top-2 right-2 h-2.5 w-2.5 text-primary opacity-60" />
-                    )}
-                    {note.encrypted && (
-                      <span className="absolute top-2 right-6 text-[9px] text-amber-500">🔒</span>
-                    )}
-                    <div className="font-semibold text-xs truncate pr-6">
-                      {note.title || t('note.untitled')}
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="font-semibold text-xs truncate flex-1 min-w-0">
+                        {note.title || t('note.untitled')}
+                      </span>
+                      {note.isPinned && <Pin className="h-2.5 w-2.5 shrink-0 text-primary opacity-60" />}
+                      {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
                     </div>
                     {!note.encrypted && (
                       <div className="text-[10px] opacity-50 truncate">
@@ -602,82 +600,82 @@ export function Sidebar() {
                   </div>
 
                   {!selectMode && (
-                    <DropdownMenu>
-                      <div className="absolute top-1.5 right-1 flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          className="p-1 rounded-sm text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          title={t('note.delete')}
-                          onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                    <div className="flex items-center gap-0 shrink-0">
+                      <button
+                        className="p-1 rounded-sm text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                        title={t('note.delete')}
+                        onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="p-1 rounded-sm text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-border transition-colors"
+                            className="p-1 rounded-sm text-sidebar-foreground/30 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                             onClick={e => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-3 w-3" />
                           </button>
                         </DropdownMenuTrigger>
-                      </div>
-                      <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
-                          {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
-                        </DropdownMenuItem>
-                        {folders.length > 0 && (
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                              <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
-                                {t('folder.unfiled')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              {folders.map(f => (
-                                <DropdownMenuItem key={f.id} onClick={() => moveNoteToFolder(note.id, f.id)}>
-                                  <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
-                                  {f.name}
+                        <DropdownMenuContent align="end" className="w-52" style={{ zIndex: 9999 }}>
+                          <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
+                            {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
+                          </DropdownMenuItem>
+                          {folders.length > 0 && (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent style={{ zIndex: 9999 }}>
+                                <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
+                                  {t('folder.unfiled')}
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {folders.map(f => (
+                                  <DropdownMenuItem key={f.id} onClick={() => moveNoteToFolder(note.id, f.id)}>
+                                    <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
+                                    {f.name}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          )}
+                          <DropdownMenuSeparator />
+                          {/* Note Color Picker */}
+                          <div className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                            <div className="text-[10px] text-muted-foreground mb-1.5">{t('note.color')}</div>
+                            <div className="flex gap-1 flex-wrap">
+                              {NOTE_COLORS.map(color => (
+                                <button
+                                  key={color || 'none'}
+                                  className={`w-4 h-4 rounded-full transition-transform ${
+                                    (note.color ?? '') === color
+                                      ? 'ring-2 ring-primary ring-offset-1 scale-110'
+                                      : 'hover:scale-110'
+                                  }`}
+                                  style={{
+                                    background: color || 'transparent',
+                                    outline: !color ? '1.5px dashed hsl(var(--border))' : undefined,
+                                  }}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    updateNote(note.id, { color: color || undefined });
+                                  }}
+                                  title={color || 'Renk yok'}
+                                />
                               ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                        )}
-                        <DropdownMenuSeparator />
-                        {/* Note Color Picker */}
-                        <div className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
-                          <div className="text-[10px] text-muted-foreground mb-1.5">{t('note.color')}</div>
-                          <div className="flex gap-1 flex-wrap">
-                            {NOTE_COLORS.map(color => (
-                              <button
-                                key={color || 'none'}
-                                className={`w-4 h-4 rounded-full transition-transform ${
-                                  (note.color ?? '') === color
-                                    ? 'ring-2 ring-primary ring-offset-1 scale-110'
-                                    : 'hover:scale-110'
-                                }`}
-                                style={{
-                                  background: color || 'transparent',
-                                  outline: !color ? '1.5px dashed hsl(var(--border))' : undefined,
-                                }}
-                                onClick={e => {
-                                  e.stopPropagation();
-                                  updateNote(note.id, { color: color || undefined });
-                                }}
-                                title={color || 'Renk yok'}
-                              />
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />{t('note.delete')}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-2" />{t('note.delete')}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   )}
                 </div>
               ))}
