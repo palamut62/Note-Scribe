@@ -61,13 +61,26 @@ router.post("/ai-proxy/chat", async (req, res) => {
   if (!authHeader) { res.status(401).json({ error: "Authorization header missing" }); return; }
 
   try {
+    // Force stream:false — we read the whole response with .text() so streaming SSE would break parsing.
+    const forwardBody = { ...req.body, stream: false };
+
+    // OpenRouter recommends these headers for better routing and analytics.
+    const extraHeaders: Record<string, string> =
+      provider === "openrouter"
+        ? { "HTTP-Referer": "https://nootle.io", "X-Title": "Nootle" }
+        : {};
+
     // Vision inference can be slow — allow up to 120 s
     const upstream = await fetchWithTimeout(
       urls.chat,
       {
         method: "POST",
-        headers: { Authorization: authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify(req.body),
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          ...extraHeaders,
+        },
+        body: JSON.stringify(forwardBody),
       },
       120_000
     );

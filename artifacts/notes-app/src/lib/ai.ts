@@ -2,6 +2,20 @@ const PROXY_BASE = '/api/ai-proxy';
 
 const OCR_MODEL = 'meta/llama-3.2-11b-vision-instruct';
 
+/** Extract a human-readable error message from any API error response shape. */
+async function extractApiError(res: Response): Promise<string> {
+  let detail = res.statusText;
+  try {
+    const j = await res.json();
+    // OpenRouter: { error: { message, code } }  |  plain: { error: "string" }  |  { message: "..." }
+    if (j?.error?.message) detail = j.error.message;
+    else if (typeof j?.error === 'string') detail = j.error;
+    else if (j?.message) detail = j.message;
+    else if (j?.raw) detail = 'Beklenmedik yanıt formatı (streaming?). Stream desteklenmiyor.';
+  } catch {}
+  return detail;
+}
+
 export const DEFAULT_AI_PROMPTS = {
   fixText:
     'Lütfen aşağıdaki metni düzelt, yazım ve dilbilgisi hatalarını gider, ancak anlamı ve tonu koru:\n\n{text}',
@@ -72,11 +86,7 @@ export async function ocrImage(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`OCR Error (${response.status}): ${detail}`);
   }
 
@@ -107,11 +117,7 @@ export async function fixText(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
@@ -145,11 +151,7 @@ export async function translateText(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
@@ -204,11 +206,7 @@ export async function fetchModels(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`Model listesi alınamadı (${response.status}): ${detail}`);
   }
 
@@ -248,11 +246,7 @@ export async function summarizeText(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
@@ -289,11 +283,7 @@ export async function suggestTags(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
@@ -326,11 +316,7 @@ export async function transcribeAudio(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.error || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`Transkripsiyon Hatası (${response.status}): ${detail}`);
   }
 
@@ -377,11 +363,7 @@ export async function chatWithNote(
   });
 
   if (!response.ok) {
-    let detail = response.statusText;
-    try {
-      const j = await response.json();
-      detail = j.error?.message || j.message || detail;
-    } catch {}
+    const detail = await extractApiError(response);
     throw new Error(`API Hatası (${response.status}): ${detail}`);
   }
 
