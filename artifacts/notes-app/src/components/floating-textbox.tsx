@@ -197,15 +197,20 @@ export function FloatingTextbox({ textbox, onChange, onDelete, isActive, onFocus
 
   // Handle bar differs in wrap vs drag mode
   const handleBar = textbox.wrapText ? (
-    // Wrap mode: always visible, no cursor-move, shows wrap indicator + settings
+    // Wrap mode: always visible, no cursor-move, shows wrap indicator + unwrap button + settings
     <div
       className="h-6 bg-black/5 hover:bg-black/10 flex items-center px-1 shrink-0 select-none"
       style={{ cursor: 'default' }}
     >
-      <span className="flex items-center gap-0.5 text-[9px] text-black/40 mr-auto font-medium">
+      <button
+        className="flex items-center gap-0.5 text-[9px] text-black/50 hover:text-primary mr-auto font-medium px-1 py-0.5 rounded hover:bg-black/10"
+        onPointerDown={e => e.stopPropagation()}
+        onClick={(e) => { e.stopPropagation(); onChange(textbox.id, { wrapText: false }); }}
+        title="Wrap'ı kapat ve serbest sürüklemeye dön"
+      >
         <WrapText className="h-3 w-3" />
-        Wrap
-      </span>
+        Unwrap
+      </button>
       {settingsPopover}
       {deleteBtn}
     </div>

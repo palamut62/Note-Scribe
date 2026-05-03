@@ -455,7 +455,7 @@ export function Sidebar() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                className="p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/30 hover:text-sidebar-foreground shrink-0"
+                                className="p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0"
                                 onClick={e => e.stopPropagation()}
                               >
                                 <MoreHorizontal className="h-3 w-3" />
@@ -602,7 +602,7 @@ export function Sidebar() {
                   {!selectMode && (
                     <div className="flex items-center gap-0 shrink-0">
                       <button
-                        className="p-1 rounded-sm text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1 rounded-sm text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
                         title={t('note.delete')}
                         onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
                       >
@@ -611,7 +611,7 @@ export function Sidebar() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="p-1 rounded-sm text-sidebar-foreground/30 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                            className="p-1 rounded-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                             onClick={e => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-3 w-3" />

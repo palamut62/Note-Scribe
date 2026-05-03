@@ -1392,6 +1392,25 @@ ul[data-type="taskList"] li > div {
     border-radius: 0 !important;
     margin: 0 !important;
     background: white !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Ensure note content is visible and flows around floats in print */
+  body.pp-mode .pp-content {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    overflow: visible !important;
+    min-height: auto !important;
+  }
+  body.pp-mode .pp-content::after {
+    content: "";
+    display: block;
+    clear: both;
+  }
+  body.pp-mode .pp-content * {
+    visibility: visible !important;
   }
 
   /* ════════════════════════════════════════════════════════════
