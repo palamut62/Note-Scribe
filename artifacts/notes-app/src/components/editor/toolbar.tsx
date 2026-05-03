@@ -7,10 +7,13 @@ import {
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
   Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages, Pencil, ScanText,
   Mic, History, Lock, Unlock, Bot, FileText, Sigma, Link2,
+  Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
+  IndentIncrease, IndentDecrease, RemoveFormatting, AlignVerticalSpaceAround,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { fixText, translateToTurkish, ocrImage, summarizeText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
@@ -105,11 +108,14 @@ export function EditorToolbar({
   onOpenEncrypt, onToggleAiChat, aiChatOpen,
 }: ToolbarProps) {
   const { settings, updateNote, updateSettings } = useApp();
+  const t = useT();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isOcring, setIsOcring] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [spacingOpen, setSpacingOpen] = useState(false);
+  const spacingRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
 
@@ -537,6 +543,12 @@ export function EditorToolbar({
         <Button variant="ghost" size="icon" className={`tbtn ${isActive('code') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleCode().run()} title="Inline code">
           <Code className="h-3.5 w-3.5" />
         </Button>
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('subscript') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleSubscript().run()} title={t('format.subscript')}>
+          <SubscriptIcon className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className={`tbtn ${isActive('superscript') ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().toggleSuperscript().run()} title={t('format.superscript')}>
+          <SuperscriptIcon className="h-3.5 w-3.5" />
+        </Button>
 
         <Divider />
 
@@ -551,6 +563,55 @@ export function EditorToolbar({
         </Button>
         <Button variant="ghost" size="icon" className={`tbtn ${editor.getAttributes('paragraph').textAlign === 'justify' ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify">
           <AlignJustify className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.commands.indent()} title={t('format.indent')}>
+          <IndentIncrease className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.commands.outdent()} title={t('format.outdent')}>
+          <IndentDecrease className="h-3.5 w-3.5" />
+        </Button>
+
+        <div ref={spacingRef} className="relative">
+          <button
+            className="case-dropdown-trigger"
+            title={t('format.line.spacing')}
+            onClick={() => setSpacingOpen(v => !v)}
+          >
+            <AlignVerticalSpaceAround size={11} />
+            <ChevronDown size={9} />
+          </button>
+          {spacingOpen && (
+            <div className="case-dropdown-menu" onMouseLeave={() => setSpacingOpen(false)}>
+              {([
+                { value: '1',    labelKey: 'format.spacing.single' },
+                { value: '1.15', labelKey: 'format.spacing.115' },
+                { value: '1.5',  labelKey: 'format.spacing.150' },
+                { value: '2',    labelKey: 'format.spacing.double' },
+                { value: '2.5',  labelKey: 'format.spacing.250' },
+                { value: '3',    labelKey: 'format.spacing.triple' },
+              ] as const).map(opt => (
+                <button
+                  key={opt.value}
+                  className="case-menu-item"
+                  onMouseDown={e => { e.preventDefault(); setSpacingOpen(false); editor.commands.setLineHeight(opt.value); }}
+                >
+                  <span className="case-preview" style={{ lineHeight: opt.value, fontSize: 11 }}>Aa</span>
+                  <span className="case-desc">{t(opt.labelKey)}</span>
+                </button>
+              ))}
+              <button
+                className="case-menu-item"
+                onMouseDown={e => { e.preventDefault(); setSpacingOpen(false); editor.commands.unsetLineHeight(); }}
+              >
+                <span className="case-preview" style={{ fontSize: 11 }}>Aa</span>
+                <span className="case-desc">Default</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title={t('format.clear')}>
+          <RemoveFormatting className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />

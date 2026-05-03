@@ -1,12 +1,17 @@
 import { useState } from 'react';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
-import { tr as dateFnsTr } from 'date-fns/locale';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from 'date-fns';
+import { tr as dateFnsTr, enUS as dateFnsEn } from 'date-fns/locale';
 
 export function CalendarView() {
-  const { notes, setActiveNoteId } = useApp();
+  const { notes, setActiveNoteId, settings } = useApp();
+  const t = useT();
+  const lang = settings.language ?? 'tr';
+  const dateFnsLocale = lang === 'tr' ? dateFnsTr : dateFnsEn;
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -25,16 +30,20 @@ export function CalendarView() {
   const prevMonth = () => setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
 
+  const dayLabels = [
+    t('calendar.day.mon'), t('calendar.day.tue'), t('calendar.day.wed'),
+    t('calendar.day.thu'), t('calendar.day.fri'), t('calendar.day.sat'), t('calendar.day.sun'),
+  ];
+
   return (
     <div className="flex-1 flex overflow-hidden">
       <div className="flex-1 p-6 overflow-auto">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
               <h2 className="text-lg font-semibold capitalize">
-                {format(currentMonth, 'MMMM yyyy', { locale: dateFnsTr })}
+                {format(currentMonth, 'MMMM yyyy', { locale: dateFnsLocale })}
               </h2>
             </div>
             <div className="flex items-center gap-1">
@@ -42,7 +51,7 @@ export function CalendarView() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => { setCurrentMonth(new Date()); setSelectedDate(new Date()); }}>
-                Bugün
+                {t('calendar.today')}
               </Button>
               <Button variant="outline" size="icon" className="h-7 w-7" onClick={nextMonth}>
                 <ChevronRight className="h-4 w-4" />
@@ -50,14 +59,12 @@ export function CalendarView() {
             </div>
           </div>
 
-          {/* Day Labels */}
           <div className="grid grid-cols-7 mb-2">
-            {['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'].map(d => (
+            {dayLabels.map(d => (
               <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">{d}</div>
             ))}
           </div>
 
-          {/* Grid */}
           <div className="grid grid-cols-7 gap-1">
             {blanks.map((_, i) => <div key={`b${i}`} />)}
             {days.map(day => {
@@ -79,9 +86,9 @@ export function CalendarView() {
                   <span className="text-xs font-medium leading-none">{format(day, 'd')}</span>
                   {hasNotes && (
                     <div className="flex gap-0.5 mt-1 flex-wrap justify-center px-0.5">
-                      {dayNotes.slice(0, 3).map((_, i) => (
+                      {dayNotes.slice(0, 3).map((_, idx) => (
                         <span
-                          key={i}
+                          key={idx}
                           className={`w-1 h-1 rounded-full ${isSelected ? 'bg-primary-foreground/70' : 'bg-primary'}`}
                         />
                       ))}
@@ -94,15 +101,14 @@ export function CalendarView() {
         </div>
       </div>
 
-      {/* Selected date notes panel */}
       <div className="w-72 border-l border-border bg-card/50 p-4 overflow-y-auto">
         {selectedDate ? (
           <>
             <h3 className="font-semibold text-sm mb-3 capitalize">
-              {format(selectedDate, 'd MMMM yyyy', { locale: dateFnsTr })}
+              {format(selectedDate, 'd MMMM yyyy', { locale: dateFnsLocale })}
             </h3>
             {selectedNotes.length === 0 ? (
-              <div className="text-xs text-muted-foreground text-center py-8">Bu tarihte not yok.</div>
+              <div className="text-xs text-muted-foreground text-center py-8">{t('calendar.no.notes')}</div>
             ) : (
               <div className="space-y-2">
                 {selectedNotes.map(note => (
@@ -122,7 +128,7 @@ export function CalendarView() {
           </>
         ) : (
           <div className="text-xs text-muted-foreground text-center py-8">
-            Tarihe tıklayarak notları görün
+            {t('calendar.click.hint')}
           </div>
         )}
       </div>

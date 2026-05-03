@@ -33,6 +33,7 @@ A full-featured Turkish note-taking web app (nootle.io).
 
 **Features:**
 - Rich text editor (TipTap v3): bold, italic, underline, font family/size, text color, lists, todo, text alignment
+- **Word-like formatting**: subscript, superscript, indent/outdent (up to 8 levels), line spacing (1.0–3.0), clear formatting
 - Notebook-style page with optional lined/grid background, floating draggable textboxes
 - **Folder/notebook system** — create folders, filter notes by folder
 - **Templates** — predefined note templates (meeting, todo, diary, blank)
@@ -69,8 +70,17 @@ A full-featured Turkish note-taking web app (nootle.io).
 - `artifacts/notes-app/src/lib/ai.ts` — summarize, suggestTags, chatWithNote
 - `artifacts/notes-app/src/lib/crypto.ts` — AES-GCM + PBKDF2 encryption
 - `artifacts/notes-app/src/lib/types.ts` — Note, Folder, VersionSnapshot, AudioClip, NoteStatus
-- `artifacts/notes-app/src/lib/i18n.ts` — TR/EN translations
+- `artifacts/notes-app/src/lib/i18n.ts` — TR/EN translations (all feature strings, 200+ keys)
+- `artifacts/notes-app/src/lib/use-t.ts` — `useT()` hook for language-aware translation
+- `artifacts/notes-app/src/components/editor/indent-extension.ts` — custom TipTap indent/outdent extension
+- `artifacts/notes-app/src/components/editor/line-height-extension.ts` — custom TipTap line-spacing extension
 - `artifacts/notes-app/src/index.css` — all styles including new feature CSS
+
+**i18n notes:**
+- All newly added components use `useT()` for TR/EN language switching: templates-dialog, version-history-dialog, ai-chat-panel, kanban-view, calendar-view, voice-recorder, note-encrypt-dialog
+- Templates provide bilingual HTML content via `getContent(lang)` functions
+- `kanban-view` uses `DictKey` for column label keys so COLUMNS can be purely static config
+- `calendar-view` switches date-fns locale between `dateFnsTr` and `dateFnsEn` based on `settings.language`
 
 **TypeScript notes:**
 - Tiptap v3: use `editor.getAttributes('paragraph').textAlign` instead of `isActive({ textAlign })`

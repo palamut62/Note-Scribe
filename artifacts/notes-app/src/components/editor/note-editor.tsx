@@ -24,6 +24,10 @@ import { AutoCorrectExtension } from './auto-correct-extension';
 import { DrawingCanvas, DrawingCanvasHandle } from '@/components/drawing/drawing-canvas';
 import { DrawingToolbar } from '@/components/drawing/drawing-toolbar';
 import { WikiLinkExtension } from './wiki-link-extension';
+import { IndentExtension } from './indent-extension';
+import { LineHeightExtension } from './line-height-extension';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
 import { AiChatPanel } from '@/components/ai-chat-panel';
 import { VoiceRecorderDialog } from '@/components/voice-recorder';
 import { VersionHistoryDialog } from '@/components/version-history-dialog';
@@ -288,6 +292,10 @@ export function NoteEditor({ note }: Props) {
           setActiveNoteId(noteId);
         },
       }),
+      Subscript,
+      Superscript,
+      IndentExtension,
+      LineHeightExtension,
     ],
     content: note.content,
     editorProps: {

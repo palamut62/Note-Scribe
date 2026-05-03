@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { Note, AudioClip } from '@/lib/types';
 import { Mic, Square, Play, Pause, Trash2, MicOff } from 'lucide-react';
 import { format } from 'date-fns';
@@ -55,6 +56,7 @@ function AudioPlayer({ clip }: { clip: AudioClip }) {
 
 export function VoiceRecorderDialog({ note, open, onClose }: Props) {
   const { updateNote } = useApp();
+  const t = useT();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [supported, setSupported] = useState(true);
@@ -83,7 +85,7 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
         reader.onload = () => {
           const clip: AudioClip = {
             id: crypto.randomUUID(),
-            name: `Kayıt ${format(new Date(), 'dd.MM.yyyy HH:mm')}`,
+            name: `${t('voice.record')} ${format(new Date(), 'dd.MM.yyyy HH:mm')}`,
             dataUrl: reader.result as string,
             duration: elapsed,
             createdAt: new Date().toISOString(),
@@ -92,7 +94,7 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
           updateNote(note.id, { audioClips: clips });
         };
         reader.readAsDataURL(blob);
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach(tr => tr.stop());
       };
 
       mr.start();
@@ -122,14 +124,14 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-primary" />
-            Ses Kayıtları
+            {t('voice.clips')}
           </DialogTitle>
         </DialogHeader>
 
         {!supported ? (
           <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
             <MicOff className="h-8 w-8 opacity-30" />
-            <p>Tarayıcınız ses kaydını desteklemiyor veya mikrofon izni reddedildi.</p>
+            <p>{t('voice.unsupported')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -142,20 +144,22 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
                   </div>
                   <Button variant="destructive" size="sm" onClick={stopRecording} className="gap-2">
                     <Square className="h-3.5 w-3.5" />
-                    Durdur
+                    {t('voice.stop')}
                   </Button>
                 </>
               ) : (
                 <Button onClick={startRecording} className="gap-2">
                   <Mic className="h-4 w-4" />
-                  Ses Kaydet
+                  {t('voice.record')}
                 </Button>
               )}
             </div>
 
             {clips.length > 0 && (
               <div className="border-t border-border pt-3 space-y-2">
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Kayıtlar</div>
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  {t('voice.recordings')}
+                </div>
                 {clips.map(clip => (
                   <div key={clip.id} className="border border-border rounded-lg p-3">
                     <div className="flex items-center justify-between mb-2">
@@ -163,6 +167,7 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
                       <button
                         onClick={() => deleteClip(clip.id)}
                         className="text-muted-foreground hover:text-destructive ml-2 shrink-0"
+                        title={t('voice.delete')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -171,6 +176,10 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
                   </div>
                 ))}
               </div>
+            )}
+
+            {clips.length === 0 && !recording && (
+              <p className="text-center text-xs text-muted-foreground pb-2">{t('voice.no.clips')}</p>
             )}
           </div>
         )}

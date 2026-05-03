@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { Note } from '@/lib/types';
 import { History, RotateCcw, Trash2, Save, Eye } from 'lucide-react';
 import { format } from 'date-fns';
@@ -21,6 +22,7 @@ function extractText(html: string): string {
 
 export function VersionHistoryDialog({ note, open, onClose }: Props) {
   const { saveVersion, restoreVersion, deleteVersion } = useApp();
+  const t = useT();
   const [label, setLabel] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
 
@@ -33,7 +35,7 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
   };
 
   const handleRestore = (versionId: string) => {
-    if (window.confirm('Bu sürüme dönmek istediğinizden emin misiniz? Mevcut içerik değiştirilecek.')) {
+    if (window.confirm(t('version.restore.confirm'))) {
       restoreVersion(note.id, versionId);
       onClose();
     }
@@ -45,27 +47,29 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            Sürüm Geçmişi
+            {t('version.title')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-2 mb-3">
           <input
             className="flex-1 px-3 py-1.5 text-sm border border-border rounded-md bg-background outline-none focus:ring-1 focus:ring-primary"
-            placeholder="Sürüm etiketi (isteğe bağlı)..."
+            placeholder={t('version.label.placeholder')}
             value={label}
             onChange={e => setLabel(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSave()}
           />
           <Button size="sm" onClick={handleSave} className="gap-1.5 shrink-0">
             <Save className="h-3.5 w-3.5" />
-            Anlık Görüntü Al
+            {t('version.save')}
           </Button>
         </div>
 
         {previewSnap && (
           <div className="mb-3 p-3 bg-accent/30 border border-border rounded-lg text-sm">
-            <div className="font-semibold mb-1 text-xs text-muted-foreground uppercase tracking-wide">Önizleme</div>
+            <div className="font-semibold mb-1 text-xs text-muted-foreground uppercase tracking-wide">
+              {t('version.preview.label')}
+            </div>
             <div className="font-medium mb-1">{previewSnap.title}</div>
             <div className="text-muted-foreground text-xs line-clamp-4">{extractText(previewSnap.content)}</div>
           </div>
@@ -74,7 +78,7 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
         <ScrollArea className="flex-1">
           {versions.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-8">
-              Henüz kayıtlı sürüm yok.
+              {t('version.empty')}
             </div>
           ) : (
             <div className="space-y-2 pr-2">
@@ -84,10 +88,12 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-xs font-semibold">
-                          {v.label || `Sürüm ${versions.length - i}`}
+                          {v.label || t('version.num', { n: versions.length - i })}
                         </span>
                         {i === 0 && (
-                          <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">Son</span>
+                          <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                            {t('version.latest.badge')}
+                          </span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -100,7 +106,7 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                        title="Önizle"
+                        title={t('version.preview.hint')}
                         onClick={() => setPreviewId(previewId === v.id ? null : v.id)}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -109,7 +115,7 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-primary"
-                        title="Bu sürüme dön"
+                        title={t('version.restore')}
                         onClick={() => handleRestore(v.id)}
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
@@ -118,7 +124,7 @@ export function VersionHistoryDialog({ note, open, onClose }: Props) {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        title="Sil"
+                        title={t('version.delete')}
                         onClick={() => deleteVersion(note.id, v.id)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />

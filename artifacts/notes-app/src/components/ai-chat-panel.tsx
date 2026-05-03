@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { Note } from '@/lib/types';
 import { ChatMessage, chatWithNote } from '@/lib/ai';
 import { Bot, Send, Trash2, X, User } from 'lucide-react';
@@ -20,6 +21,7 @@ interface Props {
 
 export function AiChatPanel({ note, onClose }: Props) {
   const { settings } = useApp();
+  const t = useT();
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -45,7 +47,7 @@ export function AiChatPanel({ note, onClose }: Props) {
     const model = settings.provider === 'openrouter' ? settings.openrouterModel : settings.nvidiaModel;
 
     if (!apiKey || !model) {
-      toast({ title: 'AI Yapılandırılmamış', description: 'Ayarlar bölümünden API anahtarı ve model seçin.', variant: 'destructive' });
+      toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
 
@@ -58,8 +60,8 @@ export function AiChatPanel({ note, onClose }: Props) {
       const noteContent = extractText(note.content);
       const reply = await chatWithNote(newMessages, noteContent, settings.provider, apiKey, model, settings.language ?? 'tr');
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    } catch (err: any) {
-      toast({ title: 'Hata', description: err.message, variant: 'destructive' });
+    } catch (err: unknown) {
+      toast({ title: t('ai.error'), description: (err as Error).message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -72,16 +74,18 @@ export function AiChatPanel({ note, onClose }: Props) {
     }
   };
 
+  const suggestions = [t('ai.chat.q1'), t('ai.chat.q2'), t('ai.chat.q3')];
+
   return (
     <div className="flex flex-col h-full border-l border-border bg-background" style={{ width: 300 }}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <Bot className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">AI Asistan</span>
+          <span className="text-sm font-semibold">{t('ai.chat.title')}</span>
         </div>
         <div className="flex items-center gap-1">
           {messages.length > 0 && (
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setMessages([])} title="Sohbeti temizle">
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setMessages([])} title={t('ai.chat.clear')}>
               <Trash2 className="h-3 w-3" />
             </Button>
           )}
@@ -95,9 +99,9 @@ export function AiChatPanel({ note, onClose }: Props) {
         {messages.length === 0 && (
           <div className="text-center text-xs text-muted-foreground mt-8 space-y-2">
             <Bot className="h-8 w-8 mx-auto opacity-30" />
-            <p>Notunuz hakkında sorular sorabilirsiniz.</p>
+            <p>{t('ai.chat.empty')}</p>
             <div className="space-y-1 text-left mt-4">
-              {['Bu notun ana konusu nedir?', 'Bu notu özetle', 'Hangi önemli noktalar var?'].map(s => (
+              {suggestions.map(s => (
                 <button
                   key={s}
                   className="w-full text-left px-2 py-1.5 text-xs rounded-md border border-border hover:bg-accent/50 transition-colors"
@@ -151,7 +155,7 @@ export function AiChatPanel({ note, onClose }: Props) {
           <textarea
             ref={inputRef}
             className="flex-1 resize-none text-xs bg-accent/30 border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground min-h-[60px] max-h-[120px]"
-            placeholder="Notunuz hakkında soru sorun..."
+            placeholder={t('ai.chat.placeholder')}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -162,11 +166,12 @@ export function AiChatPanel({ note, onClose }: Props) {
             className="h-8 w-8 self-end shrink-0"
             onClick={handleSend}
             disabled={!input.trim() || loading}
+            title={t('ai.chat.send')}
           >
             <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="text-[10px] text-muted-foreground/50 mt-1">Enter ile gönder, Shift+Enter yeni satır</div>
+        <div className="text-[10px] text-muted-foreground/50 mt-1">{t('ai.chat.hint')}</div>
       </div>
     </div>
   );
