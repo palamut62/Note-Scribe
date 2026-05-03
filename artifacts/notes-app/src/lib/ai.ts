@@ -25,6 +25,8 @@ export const DEFAULT_AI_PROMPTS = {
     'Aşağıdaki metni 3-5 madde halinde özetle. Yalnızca özeti döndür:\n\n{text}',
   chat:
     'Sen bir not asistanısın. Kullanıcının notu:\n\n{noteContent}\n\nBu nota dayanarak soruları yanıtla.',
+  chatAllNotes:
+    'Sen bir not asistanısın. Kullanıcının kayıtlı tüm notları aşağıda verilmiştir:\n\n{noteContent}\n\nBu notlara dayanarak soruları yanıtla. Cevaplarında hangi nottan bilgi aldığını belirt.',
 };
 
 export function resizeImageForOcr(dataUrl: string): Promise<string> {

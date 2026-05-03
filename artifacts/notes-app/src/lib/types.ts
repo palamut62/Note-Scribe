@@ -132,6 +132,7 @@ export interface AiPrompts {
   translate: string;
   summarize: string;
   chat: string;
+  chatAllNotes: string;
 }
 
 export interface Settings {

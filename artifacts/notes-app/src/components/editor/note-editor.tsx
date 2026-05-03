@@ -661,7 +661,7 @@ export function NoteEditor({ note }: Props) {
         </div>
 
         {showAiChat && (
-          <AiChatPanel note={note} onClose={() => setShowAiChat(false)} />
+          <AiChatPanel note={note} notes={notes} onClose={() => setShowAiChat(false)} />
         )}
         {showToc && (
           <TocPanel editor={editor} onClose={() => setShowToc(false)} />

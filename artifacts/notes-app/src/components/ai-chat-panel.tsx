@@ -4,8 +4,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { Note } from '@/lib/types';
-import { ChatMessage, chatWithNote } from '@/lib/ai';
-import { Bot, Send, Trash2, X, User } from 'lucide-react';
+import { ChatMessage, chatWithNote, DEFAULT_AI_PROMPTS } from '@/lib/ai';
+import { Bot, Send, Trash2, X, User, BookOpen, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 function extractText(html: string): string {
@@ -14,15 +14,36 @@ function extractText(html: string): string {
   return div.textContent || div.innerText || '';
 }
 
+/** Build a combined context string from all notes with per-note and total character limits. */
+function buildAllNotesContext(notes: Note[]): string {
+  const MAX_PER_NOTE = 800;
+  const MAX_TOTAL = 10_000;
+  const lines: string[] = [];
+
+  for (const n of notes) {
+    const body = extractText(n.content).trim();
+    if (!body) continue;
+    const truncated = body.length > MAX_PER_NOTE ? body.slice(0, MAX_PER_NOTE) + '…' : body;
+    lines.push(`=== ${n.title || 'Başlıksız'} ===\n${truncated}`);
+    if (lines.join('\n\n').length >= MAX_TOTAL) break;
+  }
+
+  return lines.join('\n\n');
+}
+
 interface Props {
   note: Note;
+  notes: Note[];
   onClose: () => void;
 }
 
-export function AiChatPanel({ note, onClose }: Props) {
+type Scope = 'current' | 'all';
+
+export function AiChatPanel({ note, notes, onClose }: Props) {
   const { settings } = useApp();
   const t = useT();
   const { toast } = useToast();
+  const [scope, setScope] = useState<Scope>('current');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,9 +56,8 @@ export function AiChatPanel({ note, onClose }: Props) {
     }
   }, [messages]);
 
-  useEffect(() => {
-    setMessages([]);
-  }, [note.id]);
+  // Clear conversation when switching scope or active note
+  useEffect(() => { setMessages([]); }, [note.id, scope]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -57,8 +77,29 @@ export function AiChatPanel({ note, onClose }: Props) {
     setLoading(true);
 
     try {
-      const noteContent = extractText(note.content);
-      const reply = await chatWithNote(newMessages, noteContent, settings.provider, apiKey, model, settings.language ?? 'tr', settings.aiPrompts?.chat);
+      let noteContent: string;
+      let customSystemPrompt: string | undefined;
+
+      if (scope === 'all') {
+        noteContent = buildAllNotesContext(notes);
+        const lang = settings.language ?? 'tr';
+        customSystemPrompt = lang === 'tr'
+          ? DEFAULT_AI_PROMPTS.chatAllNotes
+          : 'You are a note assistant. All the user\'s saved notes are provided below:\n\n{noteContent}\n\nAnswer questions based on these notes. Mention which note your answer comes from.';
+      } else {
+        noteContent = extractText(note.content);
+        customSystemPrompt = settings.aiPrompts?.chat;
+      }
+
+      const reply = await chatWithNote(
+        newMessages,
+        noteContent,
+        settings.provider,
+        apiKey,
+        model,
+        settings.language ?? 'tr',
+        customSystemPrompt,
+      );
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: unknown) {
       toast({ title: t('ai.error'), description: (err as Error).message, variant: 'destructive' });
@@ -74,32 +115,87 @@ export function AiChatPanel({ note, onClose }: Props) {
     }
   };
 
-  const suggestions = [t('ai.chat.q1'), t('ai.chat.q2'), t('ai.chat.q3')];
+  const currentSuggestions = [t('ai.chat.q1'), t('ai.chat.q2'), t('ai.chat.q3')];
+  const allSuggestions = [t('ai.chat.q4'), t('ai.chat.q5'), t('ai.chat.q6')];
+  const suggestions = scope === 'all' ? allSuggestions : currentSuggestions;
+
+  const placeholder = scope === 'all' ? t('ai.chat.placeholder.all') : t('ai.chat.placeholder');
+  const emptyMsg = scope === 'all' ? t('ai.chat.empty.all') : t('ai.chat.empty');
+
+  const notesWithContent = notes.filter(n => extractText(n.content).trim().length > 0);
 
   return (
     <div className="flex flex-col h-full border-l border-border bg-background" style={{ width: 300 }}>
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border shrink-0">
-        <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold">{t('ai.chat.title')}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {messages.length > 0 && (
-            <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setMessages([])} title={t('ai.chat.clear')}>
-              <Trash2 className="h-3 w-3" />
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-border shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">{t('ai.chat.title')}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost" size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                onClick={() => setMessages([])}
+                title={t('ai.chat.clear')}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
+            <Button
+              variant="ghost" size="icon"
+              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+              onClick={onClose}
+            >
+              <X className="h-3 w-3" />
             </Button>
-          )}
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" onClick={onClose}>
-            <X className="h-3 w-3" />
-          </Button>
+          </div>
+        </div>
+
+        {/* Scope toggle */}
+        <div className="flex rounded-md overflow-hidden border border-border text-xs">
+          <button
+            className={`flex-1 flex items-center justify-center gap-1 py-1 transition-colors ${
+              scope === 'current'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-accent/50 text-muted-foreground'
+            }`}
+            onClick={() => setScope('current')}
+          >
+            <FileText className="h-3 w-3" />
+            {t('ai.chat.scope.current')}
+          </button>
+          <button
+            className={`flex-1 flex items-center justify-center gap-1 py-1 transition-colors ${
+              scope === 'all'
+                ? 'bg-primary text-primary-foreground'
+                : 'hover:bg-accent/50 text-muted-foreground'
+            }`}
+            onClick={() => setScope('all')}
+          >
+            <BookOpen className="h-3 w-3" />
+            {t('ai.chat.scope.all')}
+            {scope === 'all' && notesWithContent.length > 0 && (
+              <span className="opacity-70 ml-0.5">({notesWithContent.length})</span>
+            )}
+          </button>
         </div>
       </div>
 
+      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.length === 0 && (
-          <div className="text-center text-xs text-muted-foreground mt-8 space-y-2">
-            <Bot className="h-8 w-8 mx-auto opacity-30" />
-            <p>{t('ai.chat.empty')}</p>
+          <div className="text-center text-xs text-muted-foreground mt-6 space-y-2">
+            {scope === 'all'
+              ? <BookOpen className="h-8 w-8 mx-auto opacity-30" />
+              : <Bot className="h-8 w-8 mx-auto opacity-30" />
+            }
+            <p>{emptyMsg}</p>
+            {scope === 'all' && notesWithContent.length > 0 && (
+              <p className="text-[10px] opacity-60">{notesWithContent.length} not içeriği yüklendi</p>
+            )}
             <div className="space-y-1 text-left mt-4">
               {suggestions.map(s => (
                 <button
@@ -113,6 +209,7 @@ export function AiChatPanel({ note, onClose }: Props) {
             </div>
           </div>
         )}
+
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
@@ -134,6 +231,7 @@ export function AiChatPanel({ note, onClose }: Props) {
             )}
           </div>
         ))}
+
         {loading && (
           <div className="flex gap-2 justify-start">
             <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -150,12 +248,13 @@ export function AiChatPanel({ note, onClose }: Props) {
         )}
       </div>
 
+      {/* Input */}
       <div className="p-3 border-t border-border shrink-0">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
             className="flex-1 resize-none text-xs bg-accent/30 border border-border rounded-md px-2 py-1.5 outline-none focus:ring-1 focus:ring-primary placeholder:text-muted-foreground min-h-[60px] max-h-[120px]"
-            placeholder={t('ai.chat.placeholder')}
+            placeholder={placeholder}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
