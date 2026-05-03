@@ -24,7 +24,7 @@ import {
 import {
   Download, FileText, Printer, FolderOpen, Eye,
   FileDown, Link, Filter, MoreHorizontal, Check, Pin, PinOff,
-  LayoutGrid, Calendar, FileEdit,
+  LayoutGrid, Calendar, FileEdit, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
 import mammoth from 'mammoth';
@@ -50,6 +50,25 @@ export function Home() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const clipboardHistory = useClipboardHistory();
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('notlar-sidebar-open') !== 'false'; } catch { return true; }
+  });
+
+  const toggleSidebar = () => {
+    setSidebarOpen(v => {
+      const next = !v;
+      try { localStorage.setItem('notlar-sidebar-open', String(next)); } catch {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); toggleSidebar(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const base = t('app.title');
@@ -160,7 +179,20 @@ export function Home() {
   return (
     <div className="app-root" style={{ flexDirection: 'column' }}>
       <div className="app-menubar">
-        <span className="app-title">{t('app.title')}</span>
+        <div className="flex items-center gap-1.5">
+          {currentView === 'editor' && (
+            <button
+              onClick={toggleSidebar}
+              className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+              title={sidebarOpen ? 'Paneli Gizle (Ctrl+B)' : 'Paneli Göster (Ctrl+B)'}
+            >
+              {sidebarOpen
+                ? <PanelLeftClose className="h-3.5 w-3.5" />
+                : <PanelLeftOpen className="h-3.5 w-3.5" />}
+            </button>
+          )}
+          <span className="app-title">{t('app.title')}</span>
+        </div>
         <div className="app-actions">
           <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
 
@@ -281,7 +313,7 @@ export function Home() {
       )}
 
       <div className="app-editor-area" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {currentView === 'editor' && (
+        {currentView === 'editor' && sidebarOpen && (
           <Sidebar />
         )}
 
