@@ -9,7 +9,7 @@ import {
   Mic, History, Lock, Unlock, Bot, FileText, Sigma, Link2,
   Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
   IndentIncrease, IndentDecrease, RemoveFormatting, AlignVerticalSpaceAround,
-  Info, BookOpen,
+  Info, BookOpen, Paintbrush,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,7 +17,7 @@ import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { fixText, translateText, ocrImage, summarizeText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Note, HeaderFooter, HFZone } from '@/lib/types';
 import { HeaderFooterToggle } from './header-footer-bar';
 
@@ -105,6 +105,13 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
   );
 }
 
+interface CopiedFormat {
+  bold: boolean; italic: boolean; underline: boolean; strike: boolean;
+  code: boolean; subscript: boolean; superscript: boolean;
+  color: string | null; fontSize: string | null; fontFamily: string | null;
+  highlight: string | null; textAlign: string | null; lineHeight: string | null;
+}
+
 export function EditorToolbar({
   editor, note, drawMode, onToggleDrawMode, onAddTextbox, onAddImage,
   onToggleFindReplace, onOpenMath, onOpenVoiceRecorder, onOpenVersionHistory,
@@ -125,6 +132,80 @@ export function EditorToolbar({
   const calloutRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Format Painter ──────────────────────────────────────────────────────────
+  const [formatPainterActive, setFormatPainterActive] = useState(false);
+  const copiedFormatRef = useRef<CopiedFormat | null>(null);
+  const painterActiveRef = useRef(false);
+  painterActiveRef.current = formatPainterActive;
+
+  useEffect(() => {
+    if (!editor) return;
+    const el = editor.view.dom as HTMLElement;
+    if (!formatPainterActive) {
+      el.style.cursor = '';
+      return;
+    }
+    el.style.cursor = 'crosshair';
+    const onMouseUp = () => {
+      if (!painterActiveRef.current || !copiedFormatRef.current) return;
+      if (!editor.state.selection.empty) {
+        const fmt = copiedFormatRef.current;
+        const ch = editor.chain().focus();
+        if (fmt.bold) ch.setBold(); else ch.unsetBold();
+        if (fmt.italic) ch.setItalic(); else ch.unsetItalic();
+        if (fmt.underline) ch.setUnderline(); else ch.unsetUnderline();
+        if (fmt.strike) ch.setStrike(); else ch.unsetStrike();
+        if (fmt.color) ch.setColor(fmt.color); else ch.unsetColor();
+        if (fmt.fontSize) ch.setFontSize(fmt.fontSize); else ch.setFontSize('16pt');
+        if (fmt.fontFamily) ch.setFontFamily(fmt.fontFamily); else ch.unsetFontFamily();
+        if (fmt.highlight) ch.setHighlight({ color: fmt.highlight }); else ch.unsetHighlight();
+        ch.run();
+        if (fmt.textAlign) editor.chain().focus().setTextAlign(fmt.textAlign).run();
+        if (fmt.lineHeight) editor.commands.setLineHeight(fmt.lineHeight);
+        else editor.commands.unsetLineHeight();
+        setFormatPainterActive(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setFormatPainterActive(false); };
+    el.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      el.removeEventListener('mouseup', onMouseUp);
+      document.removeEventListener('keydown', onKeyDown);
+      el.style.cursor = '';
+    };
+  }, [formatPainterActive, editor]);
+
+  const handleFormatPainter = () => {
+    if (!editor) return;
+    if (formatPainterActive) { setFormatPainterActive(false); return; }
+    const textStyle = editor.getAttributes('textStyle');
+    const highlight = editor.getAttributes('highlight');
+    let textAlign: string | null = null;
+    let lineHeight: string | null = null;
+    const { from } = editor.state.selection;
+    editor.state.doc.nodesBetween(from, from, (node) => {
+      if (node.isTextblock) {
+        textAlign = (node.attrs.textAlign as string) || null;
+        lineHeight = (node.attrs.lineHeight as string) || null;
+        return false;
+      }
+      return true;
+    });
+    copiedFormatRef.current = {
+      bold: editor.isActive('bold'), italic: editor.isActive('italic'),
+      underline: editor.isActive('underline'), strike: editor.isActive('strike'),
+      code: editor.isActive('code'), subscript: editor.isActive('subscript'),
+      superscript: editor.isActive('superscript'),
+      color: textStyle.color || null, fontSize: textStyle.fontSize || null,
+      fontFamily: textStyle.fontFamily || null,
+      highlight: highlight.color || null,
+      textAlign, lineHeight,
+    };
+    setFormatPainterActive(true);
+  };
+  // ─────────────────────────────────────────────────────────────────────────────
 
   if (!editor) return null;
 
@@ -616,6 +697,14 @@ export function EditorToolbar({
           )}
         </div>
 
+        <Button
+          variant="ghost" size="icon"
+          className={`tbtn ${formatPainterActive ? 'tbtn-on ring-1 ring-primary' : ''}`}
+          onClick={handleFormatPainter}
+          title={formatPainterActive ? t('format.painter.active') : t('format.painter')}
+        >
+          <Paintbrush className="h-3.5 w-3.5" />
+        </Button>
         <Button variant="ghost" size="icon" className="tbtn" onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title={t('format.clear')}>
           <RemoveFormatting className="h-3.5 w-3.5" />
         </Button>
