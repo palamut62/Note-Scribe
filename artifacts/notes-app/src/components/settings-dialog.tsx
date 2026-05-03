@@ -12,13 +12,13 @@ import { Settings as SettingsIcon, RefreshCw, CheckCircle2, AlertCircle, RotateC
 import { fetchModels, DEFAULT_AI_PROMPTS } from '@/lib/ai';
 import { AppTheme } from '@/lib/types';
 
-const THEMES: { id: AppTheme; label: string; bg: string; fg: string; page: string }[] = [
-  { id: 'light',        label: 'Açık',        bg: '#f0ede8', fg: '#2c2a29', page: '#fdfcfb' },
-  { id: 'dark',         label: 'Koyu',        bg: '#252320', fg: '#e8e4dc', page: '#2b2826' },
-  { id: 'sepia',        label: 'Sepia',       bg: '#ddd0b6', fg: '#3a2a18', page: '#f4ead6' },
-  { id: 'apple-yellow', label: 'Apple Not',   bg: '#f7e96a', fg: '#2c2a29', page: '#fefce8' },
-  { id: 'dark-blue',    label: 'Gece Mavisi', bg: '#0e1624', fg: '#c8d8e8', page: '#131f2e' },
-  { id: 'green-black',  label: 'Terminal',    bg: '#0a0a0a', fg: '#3ddc6a', page: '#111111' },
+const THEMES: { id: AppTheme; labelKey: string; bg: string; fg: string; page: string }[] = [
+  { id: 'light',        labelKey: 'theme.light',    bg: '#f0ede8', fg: '#2c2a29', page: '#fdfcfb' },
+  { id: 'dark',         labelKey: 'theme.dark',     bg: '#252320', fg: '#e8e4dc', page: '#2b2826' },
+  { id: 'sepia',        labelKey: 'theme.sepia',    bg: '#ddd0b6', fg: '#3a2a18', page: '#f4ead6' },
+  { id: 'apple-yellow', labelKey: 'theme.apple',    bg: '#f7e96a', fg: '#2c2a29', page: '#fefce8' },
+  { id: 'dark-blue',    labelKey: 'theme.darkblue', bg: '#0e1624', fg: '#c8d8e8', page: '#131f2e' },
+  { id: 'green-black',  labelKey: 'theme.terminal', bg: '#0a0a0a', fg: '#3ddc6a', page: '#111111' },
 ];
 
 const MARGIN_PRESETS_DATA = [
@@ -43,30 +43,10 @@ const TRANSLATE_LANGS = [
 ];
 
 const PROMPT_DEFS = [
-  {
-    key: 'fixText' as const,
-    label: 'Metin Düzeltme',
-    hint: '{text} → düzeltilecek metnin yerine gelir',
-    default: DEFAULT_AI_PROMPTS.fixText,
-  },
-  {
-    key: 'translate' as const,
-    label: 'Çeviri',
-    hint: '{text} → metin, {targetLang} → hedef dil adı',
-    default: DEFAULT_AI_PROMPTS.translate,
-  },
-  {
-    key: 'summarize' as const,
-    label: 'Özetleme',
-    hint: '{text} → özetlenecek metnin yerine gelir',
-    default: DEFAULT_AI_PROMPTS.summarize,
-  },
-  {
-    key: 'chat' as const,
-    label: 'AI Sohbet (Sistem Promptu)',
-    hint: '{noteContent} → notun içeriği',
-    default: DEFAULT_AI_PROMPTS.chat,
-  },
+  { key: 'fixText'   as const, labelKey: 'settings.ai.prompts.fix',       hintKey: 'settings.ai.prompts.fix.hint',       default: DEFAULT_AI_PROMPTS.fixText },
+  { key: 'translate' as const, labelKey: 'settings.ai.prompts.translate',  hintKey: 'settings.ai.prompts.translate.hint', default: DEFAULT_AI_PROMPTS.translate },
+  { key: 'summarize' as const, labelKey: 'settings.ai.prompts.summarize',  hintKey: 'settings.ai.prompts.summarize.hint', default: DEFAULT_AI_PROMPTS.summarize },
+  { key: 'chat'      as const, labelKey: 'settings.ai.prompts.chat',       hintKey: 'settings.ai.prompts.chat.hint',      default: DEFAULT_AI_PROMPTS.chat },
 ] as const;
 
 type ProviderStatus = 'idle' | 'loading' | 'ok' | 'error';
@@ -236,7 +216,7 @@ export function SettingsDialog() {
             <TabsTrigger value="ai" className="text-xs">{t('settings.tab.ai')}</TabsTrigger>
             <TabsTrigger value="appearance" className="text-xs">{t('settings.tab.appearance')}</TabsTrigger>
             <TabsTrigger value="page" className="text-xs">{t('settings.tab.page')}</TabsTrigger>
-            <TabsTrigger value="prompts" className="text-xs">Promptlar</TabsTrigger>
+            <TabsTrigger value="prompts" className="text-xs">{t('settings.tab.prompts')}</TabsTrigger>
           </TabsList>
 
           {/* ── AI tab ── */}
@@ -304,7 +284,7 @@ export function SettingsDialog() {
             <div className="space-y-3">
               <h3 className="font-medium text-sm border-b pb-2">{t('settings.theme')}</h3>
               <div className="grid grid-cols-3 gap-2">
-                {THEMES.map(theme => (
+                {THEMES.map((theme) => (
                   <button
                     key={theme.id}
                     onClick={() => updateSettings({ theme: theme.id })}
@@ -323,7 +303,7 @@ export function SettingsDialog() {
                       </div>
                     </div>
                     <div className="text-[10px] font-medium py-1 text-center" style={{ background: theme.bg, color: theme.fg }}>
-                      {theme.label}
+                      {t(theme.labelKey as Parameters<typeof t>[0])}
                     </div>
                     {settings.theme === theme.id && (
                       <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-primary flex items-center justify-center">
@@ -412,9 +392,9 @@ export function SettingsDialog() {
           >
             {/* Translation target language */}
             <div className="space-y-3">
-              <h3 className="font-medium text-sm border-b pb-2">Çeviri Hedef Dili</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.translate.target')}</h3>
               <p className="text-xs text-muted-foreground">
-                Araç çubuğundaki "Çevir" butonu metni bu dile çevirir.
+                {t('settings.translate.target.desc')}
               </p>
               <Select
                 value={settings.translateTarget ?? 'Türkçe'}
@@ -433,9 +413,9 @@ export function SettingsDialog() {
 
             {/* AI Prompts */}
             <div className="space-y-4">
-              <h3 className="font-medium text-sm border-b pb-2">AI Promptları</h3>
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.ai.prompts.title')}</h3>
               <p className="text-xs text-muted-foreground">
-                Her özellik için varsayılan promptu değiştirebilirsiniz. Yer tutucular: <code className="bg-muted px-1 rounded text-[10px]">{'{text}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{targetLang}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{noteContent}'}</code>
+                {t('settings.ai.prompts.desc')} <code className="bg-muted px-1 rounded text-[10px]">{'{text}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{targetLang}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{noteContent}'}</code>
               </p>
               {PROMPT_DEFS.map(def => {
                 const isCustom = !!settings.aiPrompts?.[def.key];
@@ -443,10 +423,10 @@ export function SettingsDialog() {
                   <div key={def.key} className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-medium">
-                        {def.label}
+                        {t(def.labelKey as Parameters<typeof t>[0])}
                         {isCustom && (
                           <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                            Özelleştirildi
+                            {t('settings.ai.prompts.customized')}
                           </span>
                         )}
                       </Label>
@@ -454,10 +434,10 @@ export function SettingsDialog() {
                         <button
                           className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                           onClick={() => resetPrompt(def.key)}
-                          title="Varsayılana sıfırla"
+                          title={t('settings.ai.prompts.reset.title')}
                         >
                           <RotateCcw className="h-3 w-3" />
-                          Sıfırla
+                          {t('settings.ai.prompts.reset')}
                         </button>
                       )}
                     </div>
@@ -467,7 +447,7 @@ export function SettingsDialog() {
                       onChange={e => setPrompt(def.key, e.target.value)}
                       spellCheck={false}
                     />
-                    <p className="text-[10px] text-muted-foreground">{def.hint}</p>
+                    <p className="text-[10px] text-muted-foreground">{t(def.hintKey as Parameters<typeof t>[0])}</p>
                   </div>
                 );
               })}

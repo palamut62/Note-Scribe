@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { X, Tag, Sparkles } from 'lucide-react';
 import { useApp } from '@/lib/app-state';
+import { useT } from '@/lib/use-t';
 import { suggestTags } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,6 +32,7 @@ function extractText(html: string): string {
 
 export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBarProps) {
   const { updateNote, notes, settings } = useApp();
+  const t = useT();
   const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const [inputVal, setInputVal] = useState('');
@@ -65,7 +67,7 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Yapılandırılmamış', description: 'Ayarlardan API anahtarı ve model seçin.', variant: 'destructive' });
+      toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
     const note = notes.find(n => n.id === noteId);
@@ -79,7 +81,7 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
       const newTags = suggested.filter(s => !tags.includes(s));
       setSuggestions(newTags);
     } catch (err: any) {
-      toast({ title: 'Hata', description: err.message, variant: 'destructive' });
+      toast({ title: t('ai.error'), description: err.message, variant: 'destructive' });
     } finally {
       setIsSuggesting(false);
     }
@@ -101,9 +103,9 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
             <span
               className="tag-pill-text"
               onClick={() => onFilterTag(filterTag === tag ? null : tag)}
-              title="Filtrelemek için tıkla"
+              title={t('tag.filter.click')}
             >{tag}</span>
-            <button className="tag-pill-remove" onClick={() => removeTag(tag)} title="Etiketi kaldır">
+            <button className="tag-pill-remove" onClick={() => removeTag(tag)} title={t('tag.remove')}>
               <X size={9} />
             </button>
           </span>
@@ -114,7 +116,7 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
             key={`sug-${tag}`}
             className="tag-suggestion-pill"
             onClick={() => addSuggestedTag(tag)}
-            title="Eklemek için tıkla"
+            title={t('tag.suggestion.add')}
           >
             + {tag}
           </button>
@@ -128,12 +130,12 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
             onChange={e => setInputVal(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={addTag}
-            placeholder="etiket..."
+            placeholder={t('tag.input.placeholder')}
             list="tag-suggestions"
           />
         ) : (
-          <button className="tag-add-btn" onClick={() => setAdding(true)} title="Etiket ekle">
-            + Etiket
+          <button className="tag-add-btn" onClick={() => setAdding(true)} title={t('tag.add.tooltip')}>
+            {t('tag.add')}
           </button>
         )}
 
@@ -141,7 +143,7 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
           className={`tag-ai-btn ${isSuggesting ? 'tag-ai-btn-loading' : ''}`}
           onClick={handleSuggestTags}
           disabled={isSuggesting}
-          title="AI ile etiket öner"
+          title={t('tag.ai.tooltip')}
         >
           <Sparkles size={10} className={isSuggesting ? 'animate-pulse' : ''} />
         </button>
@@ -155,9 +157,9 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
 
       {filterTag && (
         <span className="tag-filter-indicator">
-          <span style={{ color: tagColor(filterTag) }}>#{filterTag}</span> filtresi aktif
+          <span style={{ color: tagColor(filterTag) }}>#{filterTag}</span> {t('tag.filter.active')}
           <button className="tag-filter-clear" onClick={() => onFilterTag(null)}>
-            <X size={10} /> Temizle
+            <X size={10} /> {t('tag.filter.clear')}
           </button>
         </span>
       )}

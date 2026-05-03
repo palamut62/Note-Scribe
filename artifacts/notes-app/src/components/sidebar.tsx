@@ -162,7 +162,7 @@ export function Sidebar() {
 
   const handleBulkDelete = () => {
     if (!selectedIds.size) return;
-    if (!window.confirm(`${selectedIds.size} notu silmek istediğinizden emin misiniz?`)) return;
+    if (!window.confirm(t('note.bulk.delete.confirm', { n: selectedIds.size }))) return;
     selectedIds.forEach(id => deleteNote(id));
     setSelectedIds(new Set());
     setSelectMode(false);
@@ -175,7 +175,7 @@ export function Sidebar() {
   };
 
   const handleBulkAddTag = () => {
-    const tag = window.prompt('Eklenecek etiketi girin:');
+    const tag = window.prompt(t('note.bulk.tag.prompt'));
     if (!tag?.trim()) return;
     const tagName = tag.trim().toLowerCase().replace(/\s+/g, '-');
     selectedIds.forEach(id => {
@@ -251,7 +251,7 @@ export function Sidebar() {
               variant="ghost" size="icon"
               className={`h-7 w-7 hover:bg-sidebar-accent ${selectMode ? 'text-primary bg-primary/10' : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'}`}
               onClick={toggleSelectMode}
-              title={selectMode ? 'Seçimi İptal Et' : 'Notları Seç'}
+              title={selectMode ? t('note.select.cancel') : t('note.select.mode')}
             >
               <CheckSquare className="h-3.5 w-3.5" />
             </Button>
@@ -427,7 +427,7 @@ export function Sidebar() {
                 {isExpanded && (
                   <div className="ml-[22px] border-l border-border/40 pl-2 mt-0.5 pb-1 flex flex-col gap-0.5">
                     {folderNotes.length === 0 ? (
-                      <div className="py-1 px-2 text-[10px] text-sidebar-foreground/30 italic">Boş klasör</div>
+                      <div className="py-1 px-2 text-[10px] text-sidebar-foreground/30 italic">{t('folder.empty')}</div>
                     ) : (
                       folderNotes.map(note => (
                         <div
@@ -449,7 +449,7 @@ export function Sidebar() {
                           }`}
                           style={note.color ? { borderLeft: `2px solid ${note.color}`, paddingLeft: '6px' } : undefined}
                         >
-                          <span className="flex-1 truncate font-medium">{note.title || 'Başlıksız Not'}</span>
+                          <span className="flex-1 truncate font-medium">{note.title || t('note.untitled')}</span>
                           {note.isPinned && <Pin className="h-2.5 w-2.5 text-primary opacity-60 shrink-0" />}
                           {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
                         </div>
@@ -520,7 +520,7 @@ export function Sidebar() {
                       <span className="absolute top-2 right-6 text-[9px] text-amber-500">🔒</span>
                     )}
                     <div className="font-semibold text-xs truncate pr-6">
-                      {note.title || 'Untitled Note'}
+                      {note.title || t('note.untitled')}
                     </div>
                     {!note.encrypted && (
                       <div className="text-[10px] opacity-50 truncate">
@@ -547,7 +547,7 @@ export function Sidebar() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
                         <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
-                          {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />Sabitlemeyi kaldır</> : <><Pin className="h-3.5 w-3.5 mr-2" />Sabitle</>}
+                          {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
                         </DropdownMenuItem>
                         {folders.length > 0 && (
                           <DropdownMenuSub>
@@ -571,7 +571,7 @@ export function Sidebar() {
                         <DropdownMenuSeparator />
                         {/* Note Color Picker */}
                         <div className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
-                          <div className="text-[10px] text-muted-foreground mb-1.5">Not Rengi</div>
+                          <div className="text-[10px] text-muted-foreground mb-1.5">{t('note.color')}</div>
                           <div className="flex gap-1 flex-wrap">
                             {NOTE_COLORS.map(color => (
                               <button
@@ -599,7 +599,7 @@ export function Sidebar() {
                           className="text-destructive focus:text-destructive"
                           onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
                         >
-                          <Trash2 className="h-3.5 w-3.5 mr-2" />Sil
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />{t('note.delete')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -622,14 +622,14 @@ export function Sidebar() {
               onClick={selectedIds.size === displayNotes.length ? () => setSelectedIds(new Set()) : selectAll}
             >
               {selectedIds.size > 0
-                ? `${selectedIds.size} not seçildi`
-                : 'Tümünü seç'}
+                ? t('note.selected', { n: selectedIds.size })
+                : t('note.select.all')}
             </button>
             <button
               className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
               onClick={toggleSelectMode}
             >
-              İptal
+              {t('note.bulk.cancel')}
             </button>
           </div>
           {selectedIds.size > 0 && (
@@ -640,13 +640,13 @@ export function Sidebar() {
                 className="flex-1 h-6 text-[11px] px-1"
                 onClick={handleBulkDelete}
               >
-                <Trash2 className="h-3 w-3 mr-1" />Sil
+                <Trash2 className="h-3 w-3 mr-1" />{t('note.delete')}
               </Button>
               {folders.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="flex-1 h-6 text-[11px] px-1">
-                      <MoveRight className="h-3 w-3 mr-1" />Taşı
+                      <MoveRight className="h-3 w-3 mr-1" />{t('note.move')}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="center" className="w-44">
@@ -669,7 +669,7 @@ export function Sidebar() {
                 className="flex-1 h-6 text-[11px] px-1"
                 onClick={handleBulkAddTag}
               >
-                <Tag className="h-3 w-3 mr-1" />Etiket
+                <Tag className="h-3 w-3 mr-1" />{t('note.bulk.tag')}
               </Button>
             </div>
           )}
