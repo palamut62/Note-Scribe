@@ -116,6 +116,8 @@ export function EditorToolbar({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [spacingOpen, setSpacingOpen] = useState(false);
   const spacingRef = useRef<HTMLDivElement>(null);
+  const [caseOpen, setCaseOpen] = useState(false);
+  const caseRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
 
@@ -178,9 +180,6 @@ export function EditorToolbar({
       editor.chain().focus().setTextSelection({ from, to }).insertContent(transform(text)).run();
     }
   };
-
-  const [caseOpen, setCaseOpen] = useState(false);
-  const caseRef = useRef<HTMLDivElement>(null);
 
   const handleFixText = async () => {
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
