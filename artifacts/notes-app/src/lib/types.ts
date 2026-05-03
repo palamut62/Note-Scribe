@@ -109,6 +109,9 @@ export type AppTheme =
   | 'dark-blue'
   | 'green-black';
 
+export type PageSize = 'a4' | 'a5' | 'letter' | 'legal' | 'a3';
+export type PageOrientation = 'portrait' | 'landscape';
+
 export type Language = 'tr' | 'en';
 
 export type SortBy = 'updatedAt' | 'createdAt' | 'title' | 'wordCount';
@@ -146,6 +149,8 @@ export interface Settings {
   autoCorrect: boolean;
   language: Language;
   pinnedActions: PinnableActionId[];
+  pageSize?: PageSize;
+  pageOrientation?: PageOrientation;
   sortBy?: SortBy;
   sortDir?: SortDir;
   currentView?: AppView;
