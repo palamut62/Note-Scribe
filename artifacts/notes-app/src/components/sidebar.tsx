@@ -586,11 +586,6 @@ export function Sidebar() {
                       {note.isPinned && <Pin className="h-2.5 w-2.5 shrink-0 text-primary opacity-60" />}
                       {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
                     </div>
-                    {!note.encrypted && (
-                      <div className="text-[10px] opacity-50 truncate">
-                        {extractText(note.content).slice(0, 60) || '—'}
-                      </div>
-                    )}
                     <div className="text-[10px] opacity-50">
                       {format(new Date(note.updatedAt), 'dd MMM yyyy')}
                       {note.tags?.length ? (
