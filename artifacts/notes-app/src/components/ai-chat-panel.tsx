@@ -58,7 +58,7 @@ export function AiChatPanel({ note, onClose }: Props) {
 
     try {
       const noteContent = extractText(note.content);
-      const reply = await chatWithNote(newMessages, noteContent, settings.provider, apiKey, model, settings.language ?? 'tr');
+      const reply = await chatWithNote(newMessages, noteContent, settings.provider, apiKey, model, settings.language ?? 'tr', settings.aiPrompts?.chat);
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: unknown) {
       toast({ title: t('ai.error'), description: (err as Error).message, variant: 'destructive' });

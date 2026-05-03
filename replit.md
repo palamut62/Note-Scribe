@@ -58,6 +58,9 @@ A full-featured Turkish note-taking web app (nootle.io).
 - **Callout blocks** — Info/Warning/Success/Danger styled blocks via Tiptap Node extension
 - **JSON export/import** — full backup (`nootle-backup.json`) & restore from the "..." menu → Yedek
 - **Base64 image embedding** — inline images via FloatingImage (data URI, works in JSON export)
+- **Sidebar drag-and-drop** — drag any note onto a folder (or "Unfiled") to move it; folder highlights on hover
+- **Translation target language** — Settings → Promptlar tab → "Çeviri Hedef Dili" dropdown (12 languages); toolbar Translate button uses this setting
+- **AI prompt editor** — Settings → Promptlar tab; editable templates for fixText / translate / summarize / chat; {text}/{targetLang}/{noteContent} placeholders; per-prompt reset button
 - All data in `localStorage`; no backend required
 
 **Key files:**
@@ -74,7 +77,7 @@ A full-featured Turkish note-taking web app (nootle.io).
 - `artifacts/notes-app/src/components/note-encrypt-dialog.tsx` — encryption dialog
 - `artifacts/notes-app/src/components/editor/wiki-link-extension.ts` — TipTap wiki link decoration
 - `artifacts/notes-app/src/lib/app-state.tsx` — global state (notes, folders, versions, search, sort, view)
-- `artifacts/notes-app/src/lib/ai.ts` — summarize, suggestTags, chatWithNote
+- `artifacts/notes-app/src/lib/ai.ts` — `DEFAULT_AI_PROMPTS`, fixText, translateText, summarizeText, chatWithNote (all accept optional custom prompt templates)
 - `artifacts/notes-app/src/lib/crypto.ts` — AES-GCM + PBKDF2 encryption
 - `artifacts/notes-app/src/lib/types.ts` — Note, Folder, VersionSnapshot, AudioClip, NoteStatus
 - `artifacts/notes-app/src/lib/i18n.ts` — TR/EN translations (all feature strings, 200+ keys)

@@ -54,6 +54,7 @@ const defaultSettings: Settings = {
   sortBy: 'updatedAt',
   sortDir: 'desc',
   currentView: 'editor',
+  translateTarget: 'Türkçe',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);

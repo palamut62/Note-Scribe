@@ -49,6 +49,8 @@ export function Sidebar() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLInputElement>(null);
   const editFolderRef = useRef<HTMLInputElement>(null);
@@ -297,11 +299,23 @@ export function Sidebar() {
           </button>
 
           {/* Unfiled */}
-          {notes.some(n => !n.folderId) && (
+          {(notes.some(n => !n.folderId) || draggingNoteId) && (
             <button
               onClick={() => setActiveFolderId('unfiled')}
+              onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDragEnter={e => { e.preventDefault(); setDragOverId('unfiled'); }}
+              onDragLeave={() => setDragOverId(null)}
+              onDrop={e => {
+                e.preventDefault();
+                const nid = e.dataTransfer.getData('noteId');
+                if (nid) moveNoteToFolder(nid, undefined);
+                setDragOverId(null);
+                setDraggingNoteId(null);
+              }}
               className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium transition-colors mb-0.5 ${
-                activeFolderId === 'unfiled'
+                dragOverId === 'unfiled'
+                  ? 'ring-1 ring-primary bg-primary/10 text-sidebar-foreground'
+                  : activeFolderId === 'unfiled'
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                   : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
               }`}
@@ -318,9 +332,28 @@ export function Sidebar() {
             const isExpanded = expandedFolders.has(folder.id);
             const isActive = activeFolderId === folder.id;
             return (
-              <div key={folder.id} className="mb-0.5">
+              <div
+                key={folder.id}
+                className="mb-0.5"
+                onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                onDragEnter={e => { e.preventDefault(); setDragOverId(folder.id); }}
+                onDragLeave={e => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverId(null);
+                }}
+                onDrop={e => {
+                  e.preventDefault();
+                  const nid = e.dataTransfer.getData('noteId');
+                  if (nid) { moveNoteToFolder(nid, folder.id); setActiveFolderId(folder.id); }
+                  setDragOverId(null);
+                  setDraggingNoteId(null);
+                }}
+              >
                 <div className={`group flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                  isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  dragOverId === folder.id
+                    ? 'ring-1 ring-primary bg-primary/10 text-sidebar-foreground'
+                    : isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
                 }`}>
                   <button
                     className="shrink-0"
@@ -380,6 +413,13 @@ export function Sidebar() {
               {displayNotes.map(note => (
                 <div
                   key={note.id}
+                  draggable={!selectMode}
+                  onDragStart={e => {
+                    e.dataTransfer.setData('noteId', note.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    setDraggingNoteId(note.id);
+                  }}
+                  onDragEnd={() => { setDraggingNoteId(null); setDragOverId(null); }}
                   onClick={() => {
                     if (selectMode) {
                       toggleNoteSelection(note.id);
@@ -388,7 +428,9 @@ export function Sidebar() {
                     }
                   }}
                   className={`group relative flex items-start gap-2 p-2.5 rounded-md cursor-pointer transition-colors ${
-                    !selectMode && activeNoteId === note.id
+                    draggingNoteId === note.id
+                      ? 'opacity-40'
+                      : !selectMode && activeNoteId === note.id
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                       : selectMode && selectedIds.has(note.id)
                       ? 'bg-primary/10 ring-1 ring-inset ring-primary/30 text-sidebar-foreground'

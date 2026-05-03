@@ -124,6 +124,13 @@ export type PinnableActionId =
   | 'print-preview'
   | 'print-pdf';
 
+export interface AiPrompts {
+  fixText: string;
+  translate: string;
+  summarize: string;
+  chat: string;
+}
+
 export interface Settings {
   provider: 'openrouter' | 'nvidia';
   openrouterApiKey: string;
@@ -142,4 +149,6 @@ export interface Settings {
   sortBy?: SortBy;
   sortDir?: SortDir;
   currentView?: AppView;
+  translateTarget?: string;
+  aiPrompts?: Partial<AiPrompts>;
 }

@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Settings as SettingsIcon, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
-import { fetchModels } from '@/lib/ai';
+import { Settings as SettingsIcon, RefreshCw, CheckCircle2, AlertCircle, RotateCcw } from 'lucide-react';
+import { fetchModels, DEFAULT_AI_PROMPTS } from '@/lib/ai';
 import { AppTheme } from '@/lib/types';
 
 const THEMES: { id: AppTheme; label: string; bg: string; fg: string; page: string }[] = [
@@ -26,6 +26,48 @@ const MARGIN_PRESETS_DATA = [
   { key: 'normal' as const, top: 80,  bottom: 120, left: 80,  right: 80  },
   { key: 'wide'   as const, top: 120, bottom: 140, left: 128, right: 128 },
 ];
+
+const TRANSLATE_LANGS = [
+  { value: 'Türkçe',     label: '🇹🇷 Türkçe' },
+  { value: 'İngilizce',  label: '🇬🇧 İngilizce' },
+  { value: 'Almanca',    label: '🇩🇪 Almanca' },
+  { value: 'Fransızca',  label: '🇫🇷 Fransızca' },
+  { value: 'İspanyolca', label: '🇪🇸 İspanyolca' },
+  { value: 'İtalyanca',  label: '🇮🇹 İtalyanca' },
+  { value: 'Portekizce', label: '🇵🇹 Portekizce' },
+  { value: 'Rusça',      label: '🇷🇺 Rusça' },
+  { value: 'Arapça',     label: '🇸🇦 Arapça' },
+  { value: 'Japonca',    label: '🇯🇵 Japonca' },
+  { value: 'Çince',      label: '🇨🇳 Çince' },
+  { value: 'Korece',     label: '🇰🇷 Korece' },
+];
+
+const PROMPT_DEFS = [
+  {
+    key: 'fixText' as const,
+    label: 'Metin Düzeltme',
+    hint: '{text} → düzeltilecek metnin yerine gelir',
+    default: DEFAULT_AI_PROMPTS.fixText,
+  },
+  {
+    key: 'translate' as const,
+    label: 'Çeviri',
+    hint: '{text} → metin, {targetLang} → hedef dil adı',
+    default: DEFAULT_AI_PROMPTS.translate,
+  },
+  {
+    key: 'summarize' as const,
+    label: 'Özetleme',
+    hint: '{text} → özetlenecek metnin yerine gelir',
+    default: DEFAULT_AI_PROMPTS.summarize,
+  },
+  {
+    key: 'chat' as const,
+    label: 'AI Sohbet (Sistem Promptu)',
+    hint: '{noteContent} → notun içeriği',
+    default: DEFAULT_AI_PROMPTS.chat,
+  },
+] as const;
 
 type ProviderStatus = 'idle' | 'loading' | 'ok' | 'error';
 
@@ -163,6 +205,19 @@ export function SettingsDialog() {
     if (!isNaN(n) && n >= 0 && n <= 300) updateSettings({ [key]: n });
   };
 
+  const getPrompt = (key: keyof typeof DEFAULT_AI_PROMPTS) =>
+    settings.aiPrompts?.[key] ?? DEFAULT_AI_PROMPTS[key];
+
+  const setPrompt = (key: keyof typeof DEFAULT_AI_PROMPTS, value: string) => {
+    updateSettings({ aiPrompts: { ...settings.aiPrompts, [key]: value } });
+  };
+
+  const resetPrompt = (key: keyof typeof DEFAULT_AI_PROMPTS) => {
+    const next = { ...settings.aiPrompts };
+    delete next[key];
+    updateSettings({ aiPrompts: next });
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -171,16 +226,17 @@ export function SettingsDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-[540px] max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
           <DialogTitle>{t('settings.title')}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="ai" className="flex flex-col flex-1 min-h-0">
-          <TabsList className="mx-5 mb-1 shrink-0 grid grid-cols-3">
-            <TabsTrigger value="ai">{t('settings.tab.ai')}</TabsTrigger>
-            <TabsTrigger value="appearance">{t('settings.tab.appearance')}</TabsTrigger>
-            <TabsTrigger value="page">{t('settings.tab.page')}</TabsTrigger>
+          <TabsList className="mx-5 mb-1 shrink-0 grid grid-cols-4">
+            <TabsTrigger value="ai" className="text-xs">{t('settings.tab.ai')}</TabsTrigger>
+            <TabsTrigger value="appearance" className="text-xs">{t('settings.tab.appearance')}</TabsTrigger>
+            <TabsTrigger value="page" className="text-xs">{t('settings.tab.page')}</TabsTrigger>
+            <TabsTrigger value="prompts" className="text-xs">Promptlar</TabsTrigger>
           </TabsList>
 
           {/* ── AI tab ── */}
@@ -346,6 +402,75 @@ export function SettingsDialog() {
                   </div>
                 ))}
               </RadioGroup>
+            </div>
+          </TabsContent>
+
+          {/* ── Promptlar tab ── */}
+          <TabsContent
+            value="prompts"
+            className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 settings-scroll"
+          >
+            {/* Translation target language */}
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">Çeviri Hedef Dili</h3>
+              <p className="text-xs text-muted-foreground">
+                Araç çubuğundaki "Çevir" butonu metni bu dile çevirir.
+              </p>
+              <Select
+                value={settings.translateTarget ?? 'Türkçe'}
+                onValueChange={v => updateSettings({ translateTarget: v })}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRANSLATE_LANGS.map(l => (
+                    <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* AI Prompts */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm border-b pb-2">AI Promptları</h3>
+              <p className="text-xs text-muted-foreground">
+                Her özellik için varsayılan promptu değiştirebilirsiniz. Yer tutucular: <code className="bg-muted px-1 rounded text-[10px]">{'{text}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{targetLang}'}</code>, <code className="bg-muted px-1 rounded text-[10px]">{'{noteContent}'}</code>
+              </p>
+              {PROMPT_DEFS.map(def => {
+                const isCustom = !!settings.aiPrompts?.[def.key];
+                return (
+                  <div key={def.key} className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-medium">
+                        {def.label}
+                        {isCustom && (
+                          <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                            Özelleştirildi
+                          </span>
+                        )}
+                      </Label>
+                      {isCustom && (
+                        <button
+                          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => resetPrompt(def.key)}
+                          title="Varsayılana sıfırla"
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          Sıfırla
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      className="w-full min-h-[80px] text-xs px-3 py-2 rounded-md border border-input bg-background resize-y outline-none focus:ring-1 focus:ring-primary font-mono"
+                      value={getPrompt(def.key)}
+                      onChange={e => setPrompt(def.key, e.target.value)}
+                      spellCheck={false}
+                    />
+                    <p className="text-[10px] text-muted-foreground">{def.hint}</p>
+                  </div>
+                );
+              })}
             </div>
           </TabsContent>
         </Tabs>

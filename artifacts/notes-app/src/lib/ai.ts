@@ -2,6 +2,17 @@ const PROXY_BASE = '/api/ai-proxy';
 
 const OCR_MODEL = 'meta/llama-3.2-11b-vision-instruct';
 
+export const DEFAULT_AI_PROMPTS = {
+  fixText:
+    'Lütfen aşağıdaki metni düzelt, yazım ve dilbilgisi hatalarını gider, ancak anlamı ve tonu koru:\n\n{text}',
+  translate:
+    'Aşağıdaki metni {targetLang} diline çevir. Yalnızca çevrilmiş metni döndür, açıklama veya ek bilgi ekleme. Metnin biçimlendirmesini (paragraflar, satır sonları vb.) koru:\n\n{text}',
+  summarize:
+    'Aşağıdaki metni 3-5 madde halinde özetle. Yalnızca özeti döndür:\n\n{text}',
+  chat:
+    'Sen bir not asistanısın. Kullanıcının notu:\n\n{noteContent}\n\nBu nota dayanarak soruları yanıtla.',
+};
+
 export function resizeImageForOcr(dataUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -77,14 +88,14 @@ export async function fixText(
   text: string,
   provider: 'openrouter' | 'nvidia',
   apiKey: string,
-  model: string
+  model: string,
+  customPromptTemplate?: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
   if (!model) throw new Error('Model seçimi gerekli');
 
-  const prompt =
-    'Lütfen aşağıdaki metni düzelt, yazım ve dilbilgisi hatalarını gider, ancak anlamı ve tonu koru:\n\n' +
-    text;
+  const template = customPromptTemplate || DEFAULT_AI_PROMPTS.fixText;
+  const prompt = template.replace('{text}', text);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',
@@ -108,18 +119,21 @@ export async function fixText(
   return data.choices?.[0]?.message?.content || text;
 }
 
-export async function translateToTurkish(
+export async function translateText(
   text: string,
   provider: 'openrouter' | 'nvidia',
   apiKey: string,
-  model: string
+  model: string,
+  targetLang = 'Türkçe',
+  customPromptTemplate?: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
   if (!model) throw new Error('Model seçimi gerekli');
 
-  const prompt =
-    'Aşağıdaki metni Türkçeye çevir. Yalnızca çevrilmiş metni döndür, açıklama veya ek bilgi ekleme. Metnin biçimlendirmesini (paragraflar, satır sonları vb.) koru:\n\n' +
-    text;
+  const template = customPromptTemplate || DEFAULT_AI_PROMPTS.translate;
+  const prompt = template
+    .replace('{targetLang}', targetLang)
+    .replace('{text}', text);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',
@@ -147,7 +161,7 @@ export async function fixWord(
   word: string,
   provider: 'openrouter' | 'nvidia',
   apiKey: string,
-  model: string
+  model: string,
 ): Promise<string> {
   if (!apiKey || !model || !word.trim() || word.length < 2) return word;
 
@@ -212,14 +226,17 @@ export async function summarizeText(
   provider: 'openrouter' | 'nvidia',
   apiKey: string,
   model: string,
-  lang: 'tr' | 'en' = 'tr'
+  lang: 'tr' | 'en' = 'tr',
+  customPromptTemplate?: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
   if (!model) throw new Error('Model seçimi gerekli');
 
-  const prompt = lang === 'tr'
-    ? `Aşağıdaki metni 3-5 madde halinde özetle. Yalnızca özeti döndür:\n\n${text}`
-    : `Summarize the following text in 3-5 bullet points. Return only the summary:\n\n${text}`;
+  const defaultTemplate = lang === 'tr'
+    ? DEFAULT_AI_PROMPTS.summarize
+    : 'Summarize the following text in 3-5 bullet points. Return only the summary:\n\n{text}';
+  const template = customPromptTemplate || defaultTemplate;
+  const prompt = template.replace('{text}', text);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',
@@ -296,14 +313,17 @@ export async function chatWithNote(
   provider: 'openrouter' | 'nvidia',
   apiKey: string,
   model: string,
-  lang: 'tr' | 'en' = 'tr'
+  lang: 'tr' | 'en' = 'tr',
+  customSystemPrompt?: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
   if (!model) throw new Error('Model seçimi gerekli');
 
-  const systemPrompt = lang === 'tr'
-    ? `Sen bir not asistanısın. Kullanıcının notu şu:\n\n${noteContent}\n\nBu nota dayanarak soruları yanıtla.`
-    : `You are a note assistant. The user's note is:\n\n${noteContent}\n\nAnswer questions based on this note.`;
+  const defaultTemplate = lang === 'tr'
+    ? DEFAULT_AI_PROMPTS.chat
+    : 'You are a note assistant. The user\'s note is:\n\n{noteContent}\n\nAnswer questions based on this note.';
+  const template = customSystemPrompt || defaultTemplate;
+  const systemPrompt = template.replace('{noteContent}', noteContent);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',

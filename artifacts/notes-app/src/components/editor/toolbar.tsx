@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
-import { fixText, translateToTurkish, ocrImage, summarizeText } from '@/lib/ai';
+import { fixText, translateText, ocrImage, summarizeText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
 import { Note, HeaderFooter, HFZone } from '@/lib/types';
@@ -258,13 +258,14 @@ export function EditorToolbar({
     if (!textToTranslate.trim()) return;
     setIsTranslating(true);
     try {
-      const translated = await translateToTurkish(textToTranslate, settings.provider, apiKey, model);
+      const target = settings.translateTarget ?? 'Türkçe';
+      const translated = await translateText(textToTranslate, settings.provider, apiKey, model, target, settings.aiPrompts?.translate);
       if (isTextSelected) {
         editor.commands.insertContentAt({ from: selection.from, to: selection.to }, translated);
       } else {
         editor.commands.setContent(translated);
       }
-      toast({ title: 'Translated', description: 'AI translated the text to Turkish.' });
+      toast({ title: 'Çevrildi', description: `Metin ${target} diline çevrildi.` });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message || 'Could not translate', variant: 'destructive' });
     } finally {
@@ -283,7 +284,7 @@ export function EditorToolbar({
     if (!text.trim()) return;
     setIsSummarizing(true);
     try {
-      const summary = await summarizeText(text, settings.provider, apiKey, model, settings.language ?? 'tr');
+      const summary = await summarizeText(text, settings.provider, apiKey, model, settings.language ?? 'tr', settings.aiPrompts?.summarize);
       const label = settings.language === 'tr' ? 'AI Özeti' : 'AI Summary';
       const html = `<h3>${label}</h3><p>${summary.replace(/\n/g, '</p><p>')}</p><hr>`;
       editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run();
