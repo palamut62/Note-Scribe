@@ -452,6 +452,72 @@ export function Sidebar() {
                           <span className="flex-1 truncate font-medium">{note.title || t('note.untitled')}</span>
                           {note.isPinned && <Pin className="h-2.5 w-2.5 text-primary opacity-60 shrink-0" />}
                           {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/40 hover:text-sidebar-foreground shrink-0"
+                                onClick={e => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-3 w-3" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
+                                {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
+                              </DropdownMenuItem>
+                              {folders.length > 0 && (
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent>
+                                    <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
+                                      {t('folder.unfiled')}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    {folders.map(f => (
+                                      <DropdownMenuItem key={f.id} onClick={() => moveNoteToFolder(note.id, f.id)}>
+                                        <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
+                                        {f.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                              )}
+                              <DropdownMenuSeparator />
+                              <div className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                                <div className="text-[10px] text-muted-foreground mb-1.5">{t('note.color')}</div>
+                                <div className="flex gap-1 flex-wrap">
+                                  {NOTE_COLORS.map(color => (
+                                    <button
+                                      key={color || 'none'}
+                                      className={`w-4 h-4 rounded-full transition-transform ${
+                                        (note.color ?? '') === color
+                                          ? 'ring-2 ring-primary ring-offset-1 scale-110'
+                                          : 'hover:scale-110'
+                                      }`}
+                                      style={{
+                                        background: color || 'transparent',
+                                        outline: !color ? '1.5px dashed hsl(var(--border))' : undefined,
+                                      }}
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        updateNote(note.id, { color: color || undefined });
+                                      }}
+                                      title={color || t('note.color')}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-2" />{t('note.delete')}
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       ))
                     )}
