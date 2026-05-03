@@ -552,6 +552,17 @@
   box-shadow: 0 4px 24px 0 hsl(0 0% 0% / 0.5), 0 0 0 1.5px hsl(var(--border) / 0.9);
 }
 
+/* Page break separator — opaque blocker that hides text flowing into the gap */
+.page-sep-blocker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 23px;           /* 1px top-border + 20px gap + 1px bottom-border + 1px extra */
+  background: hsl(var(--muted) / 0.85);
+  pointer-events: none;
+  z-index: 10;
+}
+
 /* Page break separator & number labels */
 .page-sep-label {
   position: absolute;
@@ -559,7 +570,7 @@
   right: 0;
   height: 21px;          /* matches gradient gap height */
   pointer-events: none;
-  z-index: 8;
+  z-index: 11;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1335,6 +1346,12 @@ ul[data-type="taskList"] li > div {
   body.pp-mode .app-sidebar,
   body.pp-mode .app-editor-area,
   body.pp-mode .pp-controls {
+    display: none !important;
+  }
+
+  .page-sep-blocker,
+  .page-sep-label,
+  .page-first-label {
     display: none !important;
   }
 

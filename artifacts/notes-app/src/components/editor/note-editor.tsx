@@ -157,6 +157,9 @@ function PageOverlays({
     const labelTop = pageH * i + SEP_H * (i - 1);
     const pageTop  = (pageH + SEP_H) * i;
     nodes.push(
+      <div key={`sep-blocker-${i}`} className="page-sep-blocker" style={{ top: labelTop - 1 }} />
+    );
+    nodes.push(
       <div key={`sep-${i}`} className="page-sep-label" style={{ top: labelTop }}>
         <span className="page-sep-num">{t('page.num', { n: i + 1 })}</span>
       </div>

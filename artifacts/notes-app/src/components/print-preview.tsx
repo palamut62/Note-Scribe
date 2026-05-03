@@ -115,49 +115,7 @@ export function PrintPreview({ note, settings, onClose }: Props) {
   }, [onClose]);
 
   const handlePrint = useCallback(() => {
-    const pageEl = document.getElementById('pp-page');
-    if (!pageEl) { window.print(); return; }
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
-
-    // Collect all CSS rules from every stylesheet (includes Vite-bundled CSS + variables)
-    let allCss = '@page { size: A4; margin: 0; } body { margin: 0; padding: 0; background: white; }';
-    try {
-      for (const sheet of Array.from(document.styleSheets)) {
-        try {
-          for (const rule of Array.from(sheet.cssRules)) {
-            allCss += rule.cssText;
-          }
-        } catch { /* cross-origin sheet — skip */ }
-      }
-    } catch { /* ignore */ }
-
-    // Minimal overrides so the page fills the print area cleanly
-    allCss += `
-      .pp-page {
-        box-shadow: none !important;
-        border-radius: 0 !important;
-        width: 100% !important;
-        min-height: auto !important;
-        margin: 0 !important;
-      }
-    `;
-
-    printWindow.document.write(
-      `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${allCss}</style></head>` +
-      `<body>${pageEl.outerHTML}</body></html>`
-    );
-    printWindow.document.close();
-
-    // Give the new window time to parse styles, then print
-    setTimeout(() => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-        printWindow.close();
-      } catch { /* ignore if already closed */ }
-    }, 400);
+    window.print();
   }, []);
 
   return (
