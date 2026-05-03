@@ -603,14 +603,23 @@ export function Sidebar() {
 
                   {!selectMode && (
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <div className="absolute top-1.5 right-1 flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          className="absolute bottom-2 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/40 hover:text-sidebar-foreground rounded-sm hover:bg-sidebar-border"
-                          onClick={e => e.stopPropagation()}
+                          className="p-1 rounded-sm text-destructive/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title={t('note.delete')}
+                          onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
                         >
-                          <MoreHorizontal className="h-3 w-3" />
+                          <Trash2 className="h-3 w-3" />
                         </button>
-                      </DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="p-1 rounded-sm text-sidebar-foreground/40 hover:text-sidebar-foreground hover:bg-sidebar-border transition-colors"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </button>
+                        </DropdownMenuTrigger>
+                      </div>
                       <DropdownMenuContent align="end" className="w-52">
                         <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
                           {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
