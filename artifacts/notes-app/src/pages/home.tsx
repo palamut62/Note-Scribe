@@ -43,7 +43,7 @@ const VIEW_LABELS: Record<AppView, string> = {
 };
 
 export function Home() {
-  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView, importNotes } = useApp();
+  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView, importNotes, activeFolderId } = useApp();
   const t = useT();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +124,7 @@ export function Home() {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
       const title = file.name.replace(/\.docx$/i, '');
-      createNote({ title, content: result.value });
+      createNote({ title, content: result.value, folderId: activeFolderId && activeFolderId !== 'unfiled' ? activeFolderId : undefined });
       return;
     }
 
@@ -136,7 +136,7 @@ export function Home() {
         .split('\n')
         .map(line => `<p>${line || '<br>'}</p>`)
         .join('');
-      createNote({ title, content });
+      createNote({ title, content, folderId: activeFolderId && activeFolderId !== 'unfiled' ? activeFolderId : undefined });
     };
     reader.readAsText(file);
   };

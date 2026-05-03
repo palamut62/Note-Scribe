@@ -1,6 +1,7 @@
 // @refresh reset
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Note, Settings, Folder, VersionSnapshot, AppView, SortBy, SortDir } from './types';
+import { tr } from './i18n';
 
 const MAX_VERSIONS = 20;
 
@@ -121,7 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const createNote = useCallback((initial?: { title?: string; content?: string; tags?: string[]; folderId?: string }) => {
     const newNote: Note = {
       id: crypto.randomUUID(),
-      title: initial?.title || 'Untitled Note',
+      title: initial?.title || tr(settings.language ?? 'tr', 'note.untitled'),
       content: initial?.content || '',
       textboxes: [],
       images: [],

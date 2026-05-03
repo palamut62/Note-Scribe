@@ -206,14 +206,14 @@ interface Props {
 }
 
 export function TemplatesDialog({ open, onClose }: Props) {
-  const { createNote, settings } = useApp();
+  const { createNote, settings, activeFolderId } = useApp();
   const t = useT();
   const lang = settings.language ?? 'tr';
   const [selected, setSelected] = useState<string | null>(null);
 
   const handleUse = (template: Template) => {
     const title = t(template.titleKey as Parameters<typeof t>[0]);
-    createNote({ title, content: template.getContent(lang), tags: template.tags });
+    createNote({ title, content: template.getContent(lang), tags: template.tags, folderId: activeFolderId && activeFolderId !== 'unfiled' ? activeFolderId : undefined });
     onClose();
   };
 

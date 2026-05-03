@@ -15,7 +15,7 @@ function tagColor(tag: string): string {
 }
 
 export function TabBar() {
-  const { notes, activeNoteId, setActiveNoteId, createNote, deleteNote, updateNote, reorderNotes } = useApp();
+  const { notes, activeNoteId, setActiveNoteId, createNote, deleteNote, updateNote, reorderNotes, activeFolderId } = useApp();
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -142,7 +142,7 @@ export function TabBar() {
 
         <button
           className="tab-new-btn"
-          onClick={() => createNote()}
+          onClick={() => createNote({ folderId: activeFolderId && activeFolderId !== 'unfiled' ? activeFolderId : undefined })}
           data-testid="button-new-tab"
           title="New note"
         >
