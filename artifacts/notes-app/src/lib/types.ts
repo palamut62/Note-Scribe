@@ -10,6 +10,8 @@ export interface TextBox {
   backgroundColor: string;
   textColor: string;
   fontSize: number;
+  wrapText?: boolean;
+  float?: 'left' | 'right';
 }
 
 export interface FloatingImage {

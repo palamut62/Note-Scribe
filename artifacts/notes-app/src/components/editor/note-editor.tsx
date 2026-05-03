@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -231,6 +231,7 @@ export function NoteEditor({ note }: Props) {
   const { updateNote, settings, notes, setActiveNoteId } = useApp();
   const t = useT();
   const [activeTextboxId, setActiveTextboxId] = useState<string | null>(null);
+  const [activeTextboxEditor, setActiveTextboxEditor] = useState<Editor | null>(null);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [wordCount, setWordCount] = useState(0);
@@ -436,7 +437,12 @@ export function NoteEditor({ note }: Props) {
   const handlePageClick = () => {
     setActiveTextboxId(null);
     setActiveImageId(null);
+    setActiveTextboxEditor(null);
   };
+
+  useEffect(() => {
+    if (activeTextboxId === null) setActiveTextboxEditor(null);
+  }, [activeTextboxId]);
 
   function migrateZone(z: unknown): HFZone {
     if (!z) return { text: '' };
@@ -474,7 +480,7 @@ export function NoteEditor({ note }: Props) {
   return (
     <div className="editor-shell" style={{ display: 'flex', flexDirection: 'column' }}>
       <EditorToolbar
-        editor={editor}
+        editor={activeTextboxEditor ?? editor}
         note={note}
         drawMode={drawMode}
         onToggleDrawMode={() => setDrawMode(v => !v)}
@@ -641,7 +647,7 @@ export function NoteEditor({ note }: Props) {
                 }}
               />
             )}
-            {note.textboxes.map(tb => (
+            {note.textboxes.filter(tb => !tb.wrapText).map(tb => (
               <FloatingTextbox
                 key={tb.id}
                 textbox={tb}
@@ -649,6 +655,7 @@ export function NoteEditor({ note }: Props) {
                 onDelete={deleteTextbox}
                 isActive={activeTextboxId === tb.id}
                 onFocus={() => { setActiveTextboxId(tb.id); setActiveImageId(null); }}
+                onEditorReady={(ed) => { if (ed) setActiveTextboxEditor(ed); }}
               />
             ))}
             {(note.images ?? []).map(img => (
@@ -686,6 +693,18 @@ export function NoteEditor({ note }: Props) {
                 lineHeight: settings.lineHeight ?? 1.75,
               }}
             >
+              {note.textboxes.filter(tb => tb.wrapText).map(tb => (
+                <FloatingTextbox
+                  key={tb.id}
+                  textbox={tb}
+                  onChange={updateTextbox}
+                  onDelete={deleteTextbox}
+                  isActive={activeTextboxId === tb.id}
+                  onFocus={() => { setActiveTextboxId(tb.id); setActiveImageId(null); }}
+                  onEditorReady={(ed) => { if (ed) setActiveTextboxEditor(ed); }}
+                  floatMarginTop={Math.max(0, tb.y - (settings.marginTop ?? 80))}
+                />
+              ))}
               <EditorContent editor={editor} />
             </div>
 

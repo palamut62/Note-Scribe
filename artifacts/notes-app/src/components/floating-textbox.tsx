@@ -1,9 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { Highlight } from '@tiptap/extension-highlight';
+import TextAlign from '@tiptap/extension-text-align';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import { FontFamily } from '@tiptap/extension-font-family';
+import { FontSize } from '@tiptap/extension-font-size';
+import Subscript from '@tiptap/extension-subscript';
+import Superscript from '@tiptap/extension-superscript';
 import { Rnd } from 'react-rnd';
 import { TextBox } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Settings2 } from 'lucide-react';
+import { X, Settings2, AlignLeft, AlignRight, WrapText } from 'lucide-react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
 
 interface Props {
@@ -12,65 +24,80 @@ interface Props {
   onDelete: (id: string) => void;
   isActive: boolean;
   onFocus: () => void;
+  onEditorReady: (editor: Editor | null) => void;
+  floatMarginTop?: number;
 }
 
-export function FloatingTextbox({ textbox, onChange, onDelete, isActive, onFocus }: Props) {
-  const [localContent, setLocalContent] = useState(textbox.content);
+export function FloatingTextbox({ textbox, onChange, onDelete, isActive, onFocus, onEditorReady, floatMarginTop = 0 }: Props) {
+  const onEditorReadyRef = useRef(onEditorReady);
+  useEffect(() => { onEditorReadyRef.current = onEditorReady; }, [onEditorReady]);
+
+  const extensions = useMemo(() => [
+    StarterKit.configure({ heading: { levels: [1, 2, 3] }, codeBlock: false }),
+    TextStyle,
+    Color,
+    Highlight.configure({ multicolor: true }),
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    TaskList,
+    TaskItem.configure({ nested: true }),
+    FontFamily,
+    FontSize,
+    Subscript,
+    Superscript,
+  ], []);
+
+  const editor = useEditor({
+    extensions,
+    content: textbox.content || '',
+    onUpdate: ({ editor }) => {
+      onChange(textbox.id, { content: editor.getHTML() });
+    },
+    editorProps: {
+      attributes: {
+        class: 'tiptap focus:outline-none p-2 min-h-full overflow-y-auto',
+      },
+    },
+  });
 
   useEffect(() => {
-    setLocalContent(textbox.content);
-  }, [textbox.content]);
-
-  const handleBlur = () => {
-    if (localContent !== textbox.content) {
-      onChange(textbox.id, { content: localContent });
+    if (isActive && editor) {
+      onEditorReadyRef.current(editor);
     }
-  };
+  }, [isActive, editor]);
 
-  return (
-    <Rnd
-      size={{ width: textbox.width, height: textbox.height }}
-      position={{ x: textbox.x, y: textbox.y }}
-      onDragStop={(e, d) => {
-        onChange(textbox.id, { x: d.x, y: d.y });
+  useEffect(() => {
+    return () => { onEditorReadyRef.current(null); };
+  }, []);
+
+  const innerContent = (
+    <div
+      className={`w-full h-full flex flex-col rounded-md overflow-hidden relative group/tb shadow-md ${isActive ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+      style={{
+        borderStyle: textbox.borderStyle !== 'none' ? textbox.borderStyle : undefined,
+        borderWidth: textbox.borderStyle !== 'none' ? 2 : 0,
+        borderColor: textbox.borderColor,
+        backgroundColor: textbox.backgroundColor,
       }}
-      onResizeStop={(e, direction, ref, delta, position) => {
-        onChange(textbox.id, {
-          width: parseInt(ref.style.width, 10),
-          height: parseInt(ref.style.height, 10),
-          ...position,
-        });
-      }}
-      bounds="parent"
-      className={`absolute z-20 group ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
       onClick={onFocus}
-      dragHandleClassName="drag-handle"
     >
-      <div 
-        className="w-full h-full flex flex-col shadow-md rounded-md overflow-hidden relative"
-        style={{
-          borderStyle: textbox.borderStyle,
-          borderWidth: textbox.borderStyle !== 'none' ? 2 : 0,
-          borderColor: textbox.borderColor,
-          backgroundColor: textbox.backgroundColor,
-        }}
-      >
-        <div className="h-6 drag-handle bg-black/5 hover:bg-black/10 cursor-move flex items-center justify-end px-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          
-          <PopoverPrimitive.Root>
-            <PopoverPrimitive.Trigger asChild>
-              <Button variant="ghost" size="icon" className="h-4 w-4 mr-1 text-black/50 hover:text-black">
-                <Settings2 className="h-3 w-3" />
-              </Button>
-            </PopoverPrimitive.Trigger>
-            <PopoverPrimitive.Content className="z-50 w-64 bg-popover text-popover-foreground border p-3 rounded-md shadow-md outline-none animate-in fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2">
+      <div className="h-6 drag-handle bg-black/5 hover:bg-black/10 cursor-move flex items-center justify-end px-1 shrink-0 opacity-0 group-hover/tb:opacity-100 transition-opacity">
+        <PopoverPrimitive.Root>
+          <PopoverPrimitive.Trigger asChild>
+            <Button variant="ghost" size="icon" className="h-4 w-4 mr-1 text-black/50 hover:text-black" onPointerDown={e => e.stopPropagation()}>
+              <Settings2 className="h-3 w-3" />
+            </Button>
+          </PopoverPrimitive.Trigger>
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content
+              className="z-[9999] w-64 bg-popover text-popover-foreground border p-3 rounded-md shadow-md outline-none animate-in fade-in-0 zoom-in-95"
+              style={{ zIndex: 9999 }}
+              onPointerDown={e => e.stopPropagation()}
+            >
               <div className="grid gap-3">
                 <div className="grid grid-cols-2 items-center gap-2">
                   <span className="text-xs font-medium">Border</span>
-                  <Select value={textbox.borderStyle} onValueChange={(v: any) => onChange(textbox.id, { borderStyle: v })}>
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={textbox.borderStyle} onValueChange={(v: TextBox['borderStyle']) => onChange(textbox.id, { borderStyle: v })}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
                       <SelectItem value="solid">Solid</SelectItem>
@@ -78,55 +105,125 @@ export function FloatingTextbox({ textbox, onChange, onDelete, isActive, onFocus
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <div className="grid grid-cols-2 items-center gap-2">
                   <span className="text-xs font-medium">Border Color</span>
-                  <input type="color" value={textbox.borderColor} onChange={e => onChange(textbox.id, { borderColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0" disabled={textbox.borderStyle === 'none'}/>
+                  <input type="color" value={textbox.borderColor} onChange={e => onChange(textbox.id, { borderColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0" disabled={textbox.borderStyle === 'none'} />
                 </div>
-
                 <div className="grid grid-cols-2 items-center gap-2">
                   <span className="text-xs font-medium">Background</span>
-                  <input type="color" value={textbox.backgroundColor} onChange={e => onChange(textbox.id, { backgroundColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0"/>
+                  <input type="color" value={textbox.backgroundColor} onChange={e => onChange(textbox.id, { backgroundColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0" />
                 </div>
-
                 <div className="grid grid-cols-2 items-center gap-2">
                   <span className="text-xs font-medium">Text Color</span>
-                  <input type="color" value={textbox.textColor} onChange={e => onChange(textbox.id, { textColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0"/>
+                  <input type="color" value={textbox.textColor} onChange={e => onChange(textbox.id, { textColor: e.target.value })} className="h-6 w-full cursor-pointer p-0 border-0" />
                 </div>
-
                 <div className="grid grid-cols-2 items-center gap-2">
                   <span className="text-xs font-medium">Font Size</span>
                   <Select value={textbox.fontSize.toString()} onValueChange={v => onChange(textbox.id, { fontSize: parseInt(v, 10) })}>
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {[12,14,16,18,20,24,28,32].map(s => <SelectItem key={s} value={s.toString()}>{s}px</SelectItem>)}
+                      {[10, 12, 14, 16, 18, 20, 24, 28, 32].map(s => <SelectItem key={s} value={s.toString()}>{s}px</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="border-t pt-2 grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium flex items-center gap-1"><WrapText className="h-3 w-3" />Text Wrap</span>
+                    <button
+                      className={`w-8 h-4 rounded-full transition-colors relative ${textbox.wrapText ? 'bg-primary' : 'bg-muted'}`}
+                      onClick={() => onChange(textbox.id, { wrapText: !textbox.wrapText })}
+                      onPointerDown={e => e.stopPropagation()}
+                    >
+                      <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${textbox.wrapText ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                  {textbox.wrapText && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Float</span>
+                      <div className="flex gap-1">
+                        <button
+                          className={`p-1 rounded border text-xs flex items-center gap-0.5 ${(textbox.float ?? 'left') === 'left' ? 'bg-primary text-primary-foreground border-primary' : 'border-border'}`}
+                          onClick={() => onChange(textbox.id, { float: 'left' })}
+                          onPointerDown={e => e.stopPropagation()}
+                        >
+                          <AlignLeft className="h-3 w-3" />L
+                        </button>
+                        <button
+                          className={`p-1 rounded border text-xs flex items-center gap-0.5 ${textbox.float === 'right' ? 'bg-primary text-primary-foreground border-primary' : 'border-border'}`}
+                          onClick={() => onChange(textbox.id, { float: 'right' })}
+                          onPointerDown={e => e.stopPropagation()}
+                        >
+                          <AlignRight className="h-3 w-3" />R
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </PopoverPrimitive.Content>
-          </PopoverPrimitive.Root>
-
-          <Button variant="ghost" size="icon" className="h-4 w-4 text-black/50 hover:text-destructive" onClick={() => onDelete(textbox.id)}>
-            <X className="h-3 w-3" />
-          </Button>
-        </div>
-
-        <textarea
-          value={localContent}
-          onChange={(e) => setLocalContent(e.target.value)}
-          onBlur={handleBlur}
-          className="flex-1 w-full p-2 resize-none outline-none bg-transparent"
-          style={{ 
-            color: textbox.textColor,
-            fontSize: `${textbox.fontSize}px`
-          }}
-          placeholder="Type here..."
+          </PopoverPrimitive.Portal>
+        </PopoverPrimitive.Root>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-4 w-4 text-black/50 hover:text-destructive"
           onPointerDown={e => e.stopPropagation()}
-        />
+          onClick={(e) => { e.stopPropagation(); onDelete(textbox.id); }}
+        >
+          <X className="h-3 w-3" />
+        </Button>
       </div>
+
+      <div
+        className="flex-1 overflow-auto"
+        style={{ color: textbox.textColor, fontSize: `${textbox.fontSize}px` }}
+        onPointerDown={e => e.stopPropagation()}
+      >
+        <EditorContent editor={editor} className="h-full" />
+      </div>
+    </div>
+  );
+
+  if (textbox.wrapText) {
+    const floatDir = textbox.float ?? 'left';
+    return (
+      <div
+        style={{
+          float: floatDir,
+          width: textbox.width,
+          height: textbox.height,
+          marginTop: Math.max(0, floatMarginTop),
+          marginLeft: floatDir === 'right' ? 14 : 0,
+          marginRight: floatDir === 'left' ? 14 : 0,
+          marginBottom: 10,
+          resize: 'both',
+          overflow: 'hidden',
+          minWidth: 120,
+          minHeight: 80,
+        }}
+      >
+        {innerContent}
+      </div>
+    );
+  }
+
+  return (
+    <Rnd
+      size={{ width: textbox.width, height: textbox.height }}
+      position={{ x: textbox.x, y: textbox.y }}
+      onDragStop={(_e, d) => onChange(textbox.id, { x: d.x, y: d.y })}
+      onResizeStop={(_e, _dir, ref, _delta, position) => {
+        onChange(textbox.id, {
+          width: parseInt(ref.style.width, 10),
+          height: parseInt(ref.style.height, 10),
+          ...position,
+        });
+      }}
+      bounds="parent"
+      className="absolute z-20"
+      dragHandleClassName="drag-handle"
+    >
+      {innerContent}
     </Rnd>
   );
 }
