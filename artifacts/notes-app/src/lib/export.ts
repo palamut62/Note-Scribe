@@ -176,6 +176,22 @@ export async function exportDocx(note: Note): Promise<void> {
   downloadBlob(`${note.title || 'Untitled'}.docx`, blob);
 }
 
+export function exportAllNotesJson(notes: Note[]): void {
+  const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), notes }, null, 2);
+  downloadFile('nootle-backup.json', data, 'application/json');
+}
+
+export function importNotesFromJson(json: string): Note[] | null {
+  try {
+    const data = JSON.parse(json);
+    if (Array.isArray(data)) return data as Note[];
+    if (data && Array.isArray(data.notes)) return data.notes as Note[];
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function noteToShareUrl(note: Note): string {
   const data = { title: note.title, content: note.content, tags: note.tags ?? [] };
   const encoded = btoa(encodeURIComponent(JSON.stringify(data)));

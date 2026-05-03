@@ -25,8 +25,9 @@ import {
   Download, FileText, Printer, FolderOpen, Eye,
   FileDown, Link, Filter, MoreHorizontal, Check, Pin, PinOff,
   LayoutGrid, Calendar, FileEdit, PanelLeftClose, PanelLeftOpen,
+  DatabaseBackup, Upload,
 } from 'lucide-react';
-import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
+import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl, exportAllNotesJson, importNotesFromJson } from '@/lib/export';
 import mammoth from 'mammoth';
 
 const VIEW_ICONS: Record<AppView, React.ElementType> = {
@@ -42,10 +43,11 @@ const VIEW_LABELS: Record<AppView, string> = {
 };
 
 export function Home() {
-  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView } = useApp();
+  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView, importNotes } = useApp();
   const t = useT();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const jsonImportRef = useRef<HTMLInputElement>(null);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
@@ -139,6 +141,26 @@ export function Home() {
     reader.readAsText(file);
   };
 
+  const handleExportJson = () => {
+    exportAllNotesJson(notes);
+  };
+
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const text = await file.text();
+    const imported = importNotesFromJson(text);
+    if (!imported) {
+      alert('Geçersiz dosya. Lütfen nootle yedek dosyası (.json) seçin.');
+      return;
+    }
+    const confirmed = window.confirm(`${imported.length} not içe aktarılacak. Devam etmek istiyor musunuz?`);
+    if (confirmed) {
+      importNotes(imported);
+    }
+  };
+
   const handleShare = async () => {
     if (!activeNote) return;
     const url = noteToShareUrl(activeNote);
@@ -195,6 +217,7 @@ export function Home() {
         </div>
         <div className="app-actions">
           <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
+          <input ref={jsonImportRef} type="file" accept=".json" className="hidden" onChange={handleImportJson} />
 
           {/* View switcher */}
           <div className="flex items-center gap-0.5 mr-1 border border-border rounded-md p-0.5 bg-muted/30">
@@ -273,6 +296,20 @@ export function Home() {
                   })}
                 </span>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
+                Yedek
+              </DropdownMenuLabel>
+              <DropdownMenuItem onSelect={handleExportJson} className="flex items-center gap-2">
+                <DatabaseBackup className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="flex-1">Tüm Notları Dışa Aktar</span>
+                <span className="text-[10px] text-muted-foreground">.json</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => jsonImportRef.current?.click()} className="flex items-center gap-2">
+                <Upload className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                <span className="flex-1">Notları İçe Aktar</span>
+                <span className="text-[10px] text-muted-foreground">.json</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

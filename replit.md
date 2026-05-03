@@ -51,6 +51,13 @@ A full-featured Turkish note-taking web app (nootle.io).
 - **Kanban view** — notes displayed as cards in todo/in-progress/done columns
 - **Calendar view** — notes displayed on a monthly calendar by creation date
 - **View switcher** — Editor / Kanban / Calendar tabs at top
+- **Multi-select notes** — checkbox select mode in sidebar; bulk delete, move to folder, add tag
+- **Note color labels** — 9 preset color indicators (colored left border) on note cards, set per note
+- **TOC panel** — heading-based table of contents panel toggled from toolbar (BookOpen button)
+- **Markdown shortcuts** — `==text==` → highlighted text (InputRule)
+- **Callout blocks** — Info/Warning/Success/Danger styled blocks via Tiptap Node extension
+- **JSON export/import** — full backup (`nootle-backup.json`) & restore from the "..." menu → Yedek
+- **Base64 image embedding** — inline images via FloatingImage (data URI, works in JSON export)
 - All data in `localStorage`; no backend required
 
 **Key files:**
@@ -74,7 +81,11 @@ A full-featured Turkish note-taking web app (nootle.io).
 - `artifacts/notes-app/src/lib/use-t.ts` — `useT()` hook for language-aware translation
 - `artifacts/notes-app/src/components/editor/indent-extension.ts` — custom TipTap indent/outdent extension
 - `artifacts/notes-app/src/components/editor/line-height-extension.ts` — custom TipTap line-spacing extension
-- `artifacts/notes-app/src/index.css` — all styles including new feature CSS
+- `artifacts/notes-app/src/components/editor/callout-extension.ts` — Tiptap Node for info/warning/success/danger callout blocks
+- `artifacts/notes-app/src/components/editor/markdown-shortcuts-extension.ts` — InputRule for ==highlight==
+- `artifacts/notes-app/src/components/editor/toc-panel.tsx` — table of contents side panel (live heading tracking)
+- `artifacts/notes-app/src/lib/app-state.tsx` — global state + `importNotes` for JSON restore
+- `artifacts/notes-app/src/index.css` — all styles including new feature CSS (callout, TOC panel)
 
 **i18n notes:**
 - All newly added components use `useT()` for TR/EN language switching: templates-dialog, version-history-dialog, ai-chat-panel, kanban-view, calendar-view, voice-recorder, note-encrypt-dialog

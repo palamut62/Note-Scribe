@@ -9,6 +9,7 @@ import {
   Mic, History, Lock, Unlock, Bot, FileText, Sigma, Link2,
   Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
   IndentIncrease, IndentDecrease, RemoveFormatting, AlignVerticalSpaceAround,
+  Info, BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +35,8 @@ interface ToolbarProps {
   onOpenEncrypt: () => void;
   onToggleAiChat: () => void;
   aiChatOpen: boolean;
+  onToggleToc: () => void;
+  tocOpen: boolean;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -105,7 +108,7 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
 export function EditorToolbar({
   editor, note, drawMode, onToggleDrawMode, onAddTextbox, onAddImage,
   onToggleFindReplace, onOpenMath, onOpenVoiceRecorder, onOpenVersionHistory,
-  onOpenEncrypt, onToggleAiChat, aiChatOpen,
+  onOpenEncrypt, onToggleAiChat, aiChatOpen, onToggleToc, tocOpen,
 }: ToolbarProps) {
   const { settings, updateNote, updateSettings } = useApp();
   const t = useT();
@@ -118,6 +121,8 @@ export function EditorToolbar({
   const spacingRef = useRef<HTMLDivElement>(null);
   const [caseOpen, setCaseOpen] = useState(false);
   const caseRef = useRef<HTMLDivElement>(null);
+  const [calloutOpen, setCalloutOpen] = useState(false);
+  const calloutRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
 
@@ -625,6 +630,40 @@ export function EditorToolbar({
           <CheckSquare className="h-3.5 w-3.5" />
         </Button>
 
+        <div ref={calloutRef} className="relative">
+          <button
+            className="case-dropdown-trigger"
+            title="Bilgi Kutusu Ekle"
+            onClick={() => setCalloutOpen(v => !v)}
+          >
+            <Info size={11} />
+            <ChevronDown size={9} />
+          </button>
+          {calloutOpen && (
+            <div className="case-dropdown-menu" style={{ minWidth: 130 }} onMouseLeave={() => setCalloutOpen(false)}>
+              {([
+                { type: 'info',    label: 'Bilgi',    color: '#3b82f6', emoji: 'ℹ️' },
+                { type: 'warning', label: 'Uyarı',    color: '#f59e0b', emoji: '⚠️' },
+                { type: 'success', label: 'Başarı',   color: '#22c55e', emoji: '✅' },
+                { type: 'danger',  label: 'Tehlike',  color: '#ef4444', emoji: '🚫' },
+              ] as const).map(({ type, label, color, emoji }) => (
+                <button
+                  key={type}
+                  className="case-menu-item"
+                  onMouseDown={e => {
+                    e.preventDefault();
+                    setCalloutOpen(false);
+                    editor.commands.insertCallout(type);
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{emoji}</span>
+                  <span className="case-desc" style={{ color }}>{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <Divider />
 
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertLink} title="Add link">
@@ -726,6 +765,16 @@ export function EditorToolbar({
 
         <Button variant="ghost" size="icon" className="tbtn" onClick={onToggleFindReplace} title="Find & Replace (Ctrl+F)">
           <Search className="h-3.5 w-3.5" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`tbtn ${tocOpen ? 'tbtn-on' : ''}`}
+          onClick={onToggleToc}
+          title="İçindekiler Tablosu"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />

@@ -98,6 +98,7 @@ export interface Note {
   isPinned?: boolean;
   encrypted?: boolean;
   encryptedContent?: string;
+  color?: string;
 }
 
 export type AppTheme =

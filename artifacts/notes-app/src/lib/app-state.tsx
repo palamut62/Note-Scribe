@@ -33,6 +33,7 @@ interface AppContextType {
   restoreVersion: (noteId: string, versionId: string) => void;
   deleteVersion: (noteId: string, versionId: string) => void;
   togglePinNote: (noteId: string) => void;
+  importNotes: (importedNotes: Note[]) => void;
 }
 
 const defaultSettings: Settings = {
@@ -226,6 +227,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotes(prev => prev.map(n => n.id === noteId ? { ...n, isPinned: !n.isPinned } : n));
   }, []);
 
+  const importNotes = useCallback((importedNotes: Note[]) => {
+    const now = new Date().toISOString();
+    const normalized = importedNotes.map(n => ({
+      ...n,
+      id: crypto.randomUUID(),
+      tags: n.tags ?? [],
+      drawOps: n.drawOps ?? [],
+      textboxes: n.textboxes ?? [],
+      images: n.images ?? [],
+      versionHistory: n.versionHistory ?? [],
+      audioClips: n.audioClips ?? [],
+      createdAt: n.createdAt ?? now,
+      updatedAt: now,
+    }));
+    setNotes(prev => [...normalized, ...prev]);
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -257,6 +275,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         restoreVersion,
         deleteVersion,
         togglePinNote,
+        importNotes,
       }}
     >
       {children}

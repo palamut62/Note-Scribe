@@ -28,6 +28,9 @@ import { IndentExtension } from './indent-extension';
 import { LineHeightExtension } from './line-height-extension';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
+import { CalloutExtension } from './callout-extension';
+import { MarkdownShortcutsExtension } from './markdown-shortcuts-extension';
+import { TocPanel } from './toc-panel';
 import { AiChatPanel } from '@/components/ai-chat-panel';
 import { VoiceRecorderDialog } from '@/components/voice-recorder';
 import { VersionHistoryDialog } from '@/components/version-history-dialog';
@@ -231,6 +234,7 @@ export function NoteEditor({ note }: Props) {
   const pageMinHRef = useRef(PAGE_H);
 
   const [showAiChat, setShowAiChat] = useState(false);
+  const [showToc, setShowToc] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [showEncrypt, setShowEncrypt] = useState(false);
@@ -296,6 +300,8 @@ export function NoteEditor({ note }: Props) {
       Superscript,
       IndentExtension,
       LineHeightExtension,
+      CalloutExtension,
+      MarkdownShortcutsExtension,
     ],
     content: note.content,
     editorProps: {
@@ -460,6 +466,8 @@ export function NoteEditor({ note }: Props) {
         onOpenEncrypt={() => setShowEncrypt(true)}
         onToggleAiChat={() => setShowAiChat(v => !v)}
         aiChatOpen={showAiChat}
+        onToggleToc={() => setShowToc(v => !v)}
+        tocOpen={showToc}
       />
 
       {showFindReplace && (
@@ -622,6 +630,9 @@ export function NoteEditor({ note }: Props) {
 
         {showAiChat && (
           <AiChatPanel note={note} onClose={() => setShowAiChat(false)} />
+        )}
+        {showToc && (
+          <TocPanel editor={editor} onClose={() => setShowToc(false)} />
         )}
       </div>
 

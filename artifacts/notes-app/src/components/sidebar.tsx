@@ -7,6 +7,7 @@ import {
   Plus, Trash2, Search, SortAsc, SortDesc, FolderPlus,
   Folder as FolderIcon, FolderOpen, ChevronRight, ChevronDown,
   MoreHorizontal, Pin, PinOff, Edit2, Check, X, MoveRight,
+  CheckSquare, Tag,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -26,9 +27,14 @@ function countWords(text: string): number {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
 }
 
+const NOTE_COLORS = [
+  '', '#ef4444', '#f97316', '#eab308', '#22c55e',
+  '#3b82f6', '#8b5cf6', '#ec4899', '#06b6d4',
+];
+
 export function Sidebar() {
   const {
-    notes, folders, activeNoteId, setActiveNoteId, createNote, deleteNote,
+    notes, folders, activeNoteId, setActiveNoteId, createNote, deleteNote, updateNote,
     settings, searchQuery, setSearchQuery, sortBy, setSortBy, sortDir, setSortDir,
     activeFolderId, setActiveFolderId, createFolder, deleteFolder, renameFolder,
     moveNoteToFolder, togglePinNote,
@@ -41,6 +47,8 @@ export function Sidebar() {
   const [editingFolderName, setEditingFolderName] = useState('');
   const [newFolderName, setNewFolderName] = useState('');
   const [showNewFolder, setShowNewFolder] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const searchRef = useRef<HTMLInputElement>(null);
   const newFolderRef = useRef<HTMLInputElement>(null);
   const editFolderRef = useRef<HTMLInputElement>(null);
@@ -107,7 +115,56 @@ export function Sidebar() {
     setEditingFolderName('');
   };
 
+  const toggleSelectMode = () => {
+    setSelectMode(v => !v);
+    setSelectedIds(new Set());
+  };
+
+  const toggleNoteSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(displayNotes.map(n => n.id)));
+  };
+
+  const handleBulkDelete = () => {
+    if (!selectedIds.size) return;
+    if (!window.confirm(`${selectedIds.size} notu silmek istediğinizden emin misiniz?`)) return;
+    selectedIds.forEach(id => deleteNote(id));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+  };
+
+  const handleBulkMove = (folderId: string | undefined) => {
+    selectedIds.forEach(id => moveNoteToFolder(id, folderId));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+  };
+
+  const handleBulkAddTag = () => {
+    const tag = window.prompt('Eklenecek etiketi girin:');
+    if (!tag?.trim()) return;
+    const tagName = tag.trim().toLowerCase().replace(/\s+/g, '-');
+    selectedIds.forEach(id => {
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+      const existing = note.tags ?? [];
+      if (!existing.includes(tagName)) {
+        updateNote(id, { tags: [...existing, tagName] });
+      }
+    });
+    setSelectedIds(new Set());
+    setSelectMode(false);
+  };
+
   const FOLDER_COLORS = ['#3b82f6','#22c55e','#f97316','#ef4444','#8b5cf6','#ec4899','#eab308','#06b6d4'];
+  void FOLDER_COLORS;
 
   return (
     <div className="w-64 border-r border-border bg-sidebar flex flex-col h-full h-[100dvh]">
@@ -161,6 +218,15 @@ export function Sidebar() {
               title={t('folder.new')}
             >
               <FolderPlus className="h-3.5 w-3.5" />
+            </Button>
+
+            <Button
+              variant="ghost" size="icon"
+              className={`h-7 w-7 hover:bg-sidebar-accent ${selectMode ? 'text-primary bg-primary/10' : 'text-sidebar-foreground/60 hover:text-sidebar-foreground'}`}
+              onClick={toggleSelectMode}
+              title={selectMode ? 'Seçimi İptal Et' : 'Notları Seç'}
+            >
+              <CheckSquare className="h-3.5 w-3.5" />
             </Button>
 
             <Button
@@ -314,81 +380,196 @@ export function Sidebar() {
               {displayNotes.map(note => (
                 <div
                   key={note.id}
-                  onClick={() => setActiveNoteId(note.id)}
-                  className={`group relative flex flex-col gap-1 p-2.5 rounded-md cursor-pointer transition-colors ${
-                    activeNoteId === note.id
+                  onClick={() => {
+                    if (selectMode) {
+                      toggleNoteSelection(note.id);
+                    } else {
+                      setActiveNoteId(note.id);
+                    }
+                  }}
+                  className={`group relative flex items-start gap-2 p-2.5 rounded-md cursor-pointer transition-colors ${
+                    !selectMode && activeNoteId === note.id
                       ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      : selectMode && selectedIds.has(note.id)
+                      ? 'bg-primary/10 ring-1 ring-inset ring-primary/30 text-sidebar-foreground'
                       : 'hover:bg-sidebar-accent/50 text-sidebar-foreground'
                   }`}
+                  style={{
+                    borderLeft: note.color ? `3px solid ${note.color}` : '3px solid transparent',
+                    paddingLeft: '9px',
+                  }}
                 >
-                  {note.isPinned && (
-                    <Pin className="absolute top-2 right-2 h-2.5 w-2.5 text-primary opacity-60" />
-                  )}
-                  {note.encrypted && (
-                    <span className="absolute top-2 right-6 text-[9px] text-amber-500">🔒</span>
-                  )}
-                  <div className="font-semibold text-xs truncate pr-8">
-                    {note.title || 'Untitled Note'}
-                  </div>
-                  {!note.encrypted && (
-                    <div className="text-[10px] opacity-50 truncate">
-                      {extractText(note.content).slice(0, 60) || '—'}
+                  {selectMode && (
+                    <div className="shrink-0 mt-0.5">
+                      <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedIds.has(note.id) ? 'bg-primary border-primary' : 'border-sidebar-foreground/30'
+                      }`}>
+                        {selectedIds.has(note.id) && <Check className="h-2 w-2 text-primary-foreground" />}
+                      </div>
                     </div>
                   )}
-                  <div className="text-[10px] opacity-50">
-                    {format(new Date(note.updatedAt), 'dd MMM yyyy')}
-                    {note.tags?.length ? (
-                      <span className="ml-1 opacity-70">{note.tags.slice(0, 2).map(t => `#${t}`).join(' ')}</span>
-                    ) : null}
+
+                  <div className="flex-1 min-w-0">
+                    {note.isPinned && (
+                      <Pin className="absolute top-2 right-2 h-2.5 w-2.5 text-primary opacity-60" />
+                    )}
+                    {note.encrypted && (
+                      <span className="absolute top-2 right-6 text-[9px] text-amber-500">🔒</span>
+                    )}
+                    <div className="font-semibold text-xs truncate pr-6">
+                      {note.title || 'Untitled Note'}
+                    </div>
+                    {!note.encrypted && (
+                      <div className="text-[10px] opacity-50 truncate">
+                        {extractText(note.content).slice(0, 60) || '—'}
+                      </div>
+                    )}
+                    <div className="text-[10px] opacity-50">
+                      {format(new Date(note.updatedAt), 'dd MMM yyyy')}
+                      {note.tags?.length ? (
+                        <span className="ml-1 opacity-70">{note.tags.slice(0, 2).map(tg => `#${tg}`).join(' ')}</span>
+                      ) : null}
+                    </div>
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        className="absolute bottom-2 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/40 hover:text-sidebar-foreground rounded-sm hover:bg-sidebar-border"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <MoreHorizontal className="h-3 w-3" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
-                        {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />Sabitlemeyi kaldır</> : <><Pin className="h-3.5 w-3.5 mr-2" />Sabitle</>}
-                      </DropdownMenuItem>
-                      {folders.length > 0 && (
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
-                              {t('folder.unfiled')}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {folders.map(f => (
-                              <DropdownMenuItem key={f.id} onClick={() => moveNoteToFolder(note.id, f.id)}>
-                                <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
-                                {f.name}
+                  {!selectMode && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="absolute bottom-2 right-1.5 p-1 opacity-0 group-hover:opacity-100 transition-opacity text-sidebar-foreground/40 hover:text-sidebar-foreground rounded-sm hover:bg-sidebar-border"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
+                          {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />Sabitlemeyi kaldır</> : <><Pin className="h-3.5 w-3.5 mr-2" />Sabitle</>}
+                        </DropdownMenuItem>
+                        {folders.length > 0 && (
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
+                                {t('folder.unfiled')}
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {folders.map(f => (
+                                <DropdownMenuItem key={f.id} onClick={() => moveNoteToFolder(note.id, f.id)}>
+                                  <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
+                                  {f.name}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                        )}
+                        <DropdownMenuSeparator />
+                        {/* Note Color Picker */}
+                        <div className="px-2 py-1.5" onClick={e => e.stopPropagation()}>
+                          <div className="text-[10px] text-muted-foreground mb-1.5">Not Rengi</div>
+                          <div className="flex gap-1 flex-wrap">
+                            {NOTE_COLORS.map(color => (
+                              <button
+                                key={color || 'none'}
+                                className={`w-4 h-4 rounded-full transition-transform ${
+                                  (note.color ?? '') === color
+                                    ? 'ring-2 ring-primary ring-offset-1 scale-110'
+                                    : 'hover:scale-110'
+                                }`}
+                                style={{
+                                  background: color || 'transparent',
+                                  outline: !color ? '1.5px dashed hsl(var(--border))' : undefined,
+                                }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  updateNote(note.id, { color: color || undefined });
+                                }}
+                                title={color || 'Renk yok'}
+                              />
                             ))}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />Sil
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                          </div>
+                        </div>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 mr-2" />Sil
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
       </ScrollArea>
+
+      {/* Bulk Action Bar */}
+      {selectMode && (
+        <div className="shrink-0 border-t border-border p-2 bg-sidebar">
+          <div className="flex items-center justify-between mb-1.5">
+            <button
+              className="text-[11px] text-sidebar-foreground/60 hover:text-primary transition-colors"
+              onClick={selectedIds.size === displayNotes.length ? () => setSelectedIds(new Set()) : selectAll}
+            >
+              {selectedIds.size > 0
+                ? `${selectedIds.size} not seçildi`
+                : 'Tümünü seç'}
+            </button>
+            <button
+              className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              onClick={toggleSelectMode}
+            >
+              İptal
+            </button>
+          </div>
+          {selectedIds.size > 0 && (
+            <div className="flex gap-1">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1 h-6 text-[11px] px-1"
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />Sil
+              </Button>
+              {folders.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1 h-6 text-[11px] px-1">
+                      <MoveRight className="h-3 w-3 mr-1" />Taşı
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-44">
+                    <DropdownMenuItem onClick={() => handleBulkMove(undefined)}>
+                      {t('folder.unfiled')}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {folders.map(f => (
+                      <DropdownMenuItem key={f.id} onClick={() => handleBulkMove(f.id)}>
+                        <span className="w-2 h-2 rounded-full mr-2 shrink-0" style={{ background: f.color }} />
+                        {f.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-6 text-[11px] px-1"
+                onClick={handleBulkAddTag}
+              >
+                <Tag className="h-3 w-3 mr-1" />Etiket
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
