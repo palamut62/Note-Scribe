@@ -29,26 +29,51 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 ## Artifacts
 
 ### Not Uygulaması (notes-app) — `/`
-A minimal Apple Notes-inspired note-taking web app.
+A full-featured Turkish note-taking web app (nootle.io).
 
 **Features:**
-- Rich text editor powered by TipTap (bold, italic, underline, font family/size, text color, lists, todo lists, text alignment)
-- Notebook-style page with optional lined or grid background (28px grid aligned to text baseline)
-- Floating, draggable & resizable textboxes (react-rnd) with customizable border, background, text color, font size
-- AI text correction via OpenRouter or NVIDIA NIM (user's own API key, model auto-fetched from provider API)
-- Save notes as `.txt` or `.md`
-- All notes and settings persisted in `localStorage` (no backend needed)
-- Settings panel: AI provider/key/model selection, background pattern picker
+- Rich text editor (TipTap v3): bold, italic, underline, font family/size, text color, lists, todo, text alignment
+- Notebook-style page with optional lined/grid background, floating draggable textboxes
+- **Folder/notebook system** — create folders, filter notes by folder
+- **Templates** — predefined note templates (meeting, todo, diary, blank)
+- **Version history** — snapshot timeline with restore
+- **Wiki-style note links** — `[[note title]]` auto-links between notes
+- **Full-text search** — real-time search across all notes
+- **Smart filters & sort** — sort by title/date/updated; pin notes
+- **AI chat panel** — per-note AI conversation using OpenRouter/NVIDIA
+- **AI auto-summary** — appends AI-generated summary at bottom of note
+- **AI tag suggestions** — AI proposes tags based on content
+- **LaTeX/math formulas** — KaTeX math insert dialog
+- **Code syntax highlighting** — CodeBlockLowlight with common language support
+- **Voice recording** — mic capture, attach audio clips to notes
+- **Note encryption** — AES-GCM + PBKDF2 password-based encryption
+- **Kanban view** — notes displayed as cards in todo/in-progress/done columns
+- **Calendar view** — notes displayed on a monthly calendar by creation date
+- **View switcher** — Editor / Kanban / Calendar tabs at top
+- All data in `localStorage`; no backend required
 
 **Key files:**
-- `artifacts/notes-app/src/pages/home.tsx` — main layout
-- `artifacts/notes-app/src/components/editor/note-editor.tsx` — TipTap editor + textbox management
-- `artifacts/notes-app/src/components/editor/toolbar.tsx` — formatting toolbar + AI fix button
-- `artifacts/notes-app/src/components/floating-textbox.tsx` — draggable textbox component
-- `artifacts/notes-app/src/components/settings-dialog.tsx` — settings modal
-- `artifacts/notes-app/src/components/sidebar.tsx` — note list sidebar
-- `artifacts/notes-app/src/lib/app-state.tsx` — global state + localStorage persistence
-- `artifacts/notes-app/src/lib/ai.ts` — AI provider API calls (OpenRouter / NVIDIA NIM)
-- `artifacts/notes-app/src/lib/export.ts` — .txt and .md file export
-- `artifacts/notes-app/src/lib/types.ts` — TypeScript types (Note, TextBox, Settings)
-- `artifacts/notes-app/src/index.css` — theme (warm paper/ink palette) + TipTap styles + notebook background patterns
+- `artifacts/notes-app/src/pages/home.tsx` — main layout + view switcher
+- `artifacts/notes-app/src/components/editor/note-editor.tsx` — TipTap editor + all dialogs
+- `artifacts/notes-app/src/components/editor/toolbar.tsx` — formatting toolbar + AI buttons
+- `artifacts/notes-app/src/components/sidebar.tsx` — note list, search, sort, folders
+- `artifacts/notes-app/src/components/kanban-view.tsx` — kanban board
+- `artifacts/notes-app/src/components/calendar-view.tsx` — calendar view
+- `artifacts/notes-app/src/components/ai-chat-panel.tsx` — AI chat sidebar
+- `artifacts/notes-app/src/components/templates-dialog.tsx` — template picker
+- `artifacts/notes-app/src/components/version-history-dialog.tsx` — version restore
+- `artifacts/notes-app/src/components/voice-recorder.tsx` — audio recording
+- `artifacts/notes-app/src/components/note-encrypt-dialog.tsx` — encryption dialog
+- `artifacts/notes-app/src/components/editor/wiki-link-extension.ts` — TipTap wiki link decoration
+- `artifacts/notes-app/src/lib/app-state.tsx` — global state (notes, folders, versions, search, sort, view)
+- `artifacts/notes-app/src/lib/ai.ts` — summarize, suggestTags, chatWithNote
+- `artifacts/notes-app/src/lib/crypto.ts` — AES-GCM + PBKDF2 encryption
+- `artifacts/notes-app/src/lib/types.ts` — Note, Folder, VersionSnapshot, AudioClip, NoteStatus
+- `artifacts/notes-app/src/lib/i18n.ts` — TR/EN translations
+- `artifacts/notes-app/src/index.css` — all styles including new feature CSS
+
+**TypeScript notes:**
+- Tiptap v3: use `editor.getAttributes('paragraph').textAlign` instead of `isActive({ textAlign })`
+- `editor.storage` is Browser Storage — use `useRef` for custom per-editor state
+- React 19: `useRef<T>()` returns `RefObject<T | null>`; component props must accept `T | null`
+- `useEffect` callbacks with conditional early returns need explicit `return undefined` on all paths

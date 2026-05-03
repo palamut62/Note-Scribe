@@ -49,6 +49,35 @@ export interface RectOp      extends DrawBase { type: 'rect';    x:number;  y:nu
 export interface EllipseOp   extends DrawBase { type: 'ellipse'; cx:number; cy:number; rx:number; ry:number; fill?: string; }
 export type DrawOp = PenOp | HighlightOp | EraserOp | LineOp | ArrowOp | RectOp | EllipseOp;
 
+/* ─── Folder ──────────────────────────────────────────────────────────────── */
+export interface Folder {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+}
+
+/* ─── Version History ─────────────────────────────────────────────────────── */
+export interface VersionSnapshot {
+  id: string;
+  content: string;
+  title: string;
+  savedAt: string;
+  label?: string;
+}
+
+/* ─── Audio Clips ─────────────────────────────────────────────────────────── */
+export interface AudioClip {
+  id: string;
+  name: string;
+  dataUrl: string;
+  duration: number;
+  createdAt: string;
+}
+
+/* ─── Kanban Status ───────────────────────────────────────────────────────── */
+export type NoteStatus = 'todo' | 'in-progress' | 'done' | 'archived';
+
 /* ─── Note ────────────────────────────────────────────────────────────────── */
 export interface Note {
   id: string;
@@ -62,6 +91,13 @@ export interface Note {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  folderId?: string;
+  status?: NoteStatus;
+  versionHistory?: VersionSnapshot[];
+  audioClips?: AudioClip[];
+  isPinned?: boolean;
+  encrypted?: boolean;
+  encryptedContent?: string;
 }
 
 export type AppTheme =
@@ -73,6 +109,10 @@ export type AppTheme =
   | 'green-black';
 
 export type Language = 'tr' | 'en';
+
+export type SortBy = 'updatedAt' | 'createdAt' | 'title' | 'wordCount';
+export type SortDir = 'desc' | 'asc';
+export type AppView = 'editor' | 'kanban' | 'calendar';
 
 export type PinnableActionId =
   | 'open-file'
@@ -98,4 +138,7 @@ export interface Settings {
   autoCorrect: boolean;
   language: Language;
   pinnedActions: PinnableActionId[];
+  sortBy?: SortBy;
+  sortDir?: SortDir;
+  currentView?: AppView;
 }

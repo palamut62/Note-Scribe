@@ -6,11 +6,12 @@ import {
   Wand2, Square, Search, Link as LinkIcon, Image as ImageIcon,
   Table as TableIcon, Code, Heading1, Heading2, Heading3,
   Quote, Minus, CalendarDays, LayoutTemplate, Sparkles, ChevronDown, Languages, Pencil, ScanText,
+  Mic, History, Lock, Unlock, Bot, FileText, Sigma, Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useApp } from '@/lib/app-state';
-import { fixText, translateToTurkish, ocrImage } from '@/lib/ai';
+import { fixText, translateToTurkish, ocrImage, summarizeText } from '@/lib/ai';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useRef } from 'react';
 import { Note, HeaderFooter, HFZone } from '@/lib/types';
@@ -24,6 +25,12 @@ interface ToolbarProps {
   onAddTextbox: () => void;
   onAddImage: (src: string, alt: string) => void;
   onToggleFindReplace: () => void;
+  onOpenMath: () => void;
+  onOpenVoiceRecorder: () => void;
+  onOpenVersionHistory: () => void;
+  onOpenEncrypt: () => void;
+  onToggleAiChat: () => void;
+  aiChatOpen: boolean;
 }
 
 const HIGHLIGHT_COLORS = [
@@ -92,12 +99,17 @@ function ColorSwatch({ colors, onSelect, label, currentColor, icon }: ColorSwatc
   );
 }
 
-export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddTextbox, onAddImage, onToggleFindReplace }: ToolbarProps) {
+export function EditorToolbar({
+  editor, note, drawMode, onToggleDrawMode, onAddTextbox, onAddImage,
+  onToggleFindReplace, onOpenMath, onOpenVoiceRecorder, onOpenVersionHistory,
+  onOpenEncrypt, onToggleAiChat, aiChatOpen,
+}: ToolbarProps) {
   const { settings, updateNote, updateSettings } = useApp();
   const { toast } = useToast();
   const [isFixing, setIsFixing] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [isOcring, setIsOcring] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const ocrInputRef = useRef<HTMLInputElement>(null);
 
@@ -176,7 +188,6 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     const sel = state.selection;
     const isTextSelected = !sel.empty;
 
-    // Collect textblocks with position range + first-mark set (preserves bold/italic/font/size/color)
     type Para = { from: number; to: number; text: string; marks: ReturnType<typeof state.schema.text>['marks'] };
     const paragraphs: Para[] = [];
 
@@ -187,7 +198,6 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       if (from >= to) return;
       const text = node.textContent;
       if (!text.trim()) return;
-      // Collect marks from every text child to preserve inline styles
       const marks: any[] = [];
       node.forEach((child: any) => { if (child.isText && marks.length === 0) marks.push(...child.marks); });
       paragraphs.push({ from, to, text, marks });
@@ -206,7 +216,6 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       const fixedAll  = await fixText(allText, settings.provider, apiKey, model);
       const fixedLines = fixedAll.split('\n');
 
-      // Build a single transaction processing in REVERSE to keep positions valid
       const tr = state.tr;
       for (let i = paragraphs.length - 1; i >= 0; i--) {
         const { from, to, marks } = paragraphs[i];
@@ -235,7 +244,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     const isTextSelected = !selection.empty;
     const textToTranslate = isTextSelected
       ? editor.state.doc.textBetween(selection.from, selection.to, '\n')
-      : editor.getText('\n');
+      : editor.getText();
     if (!textToTranslate.trim()) return;
     setIsTranslating(true);
     try {
@@ -253,6 +262,36 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
     }
   };
 
+  const handleSummarize = async () => {
+    const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
+    if (!apiKey || !model) {
+      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
+      return;
+    }
+    const text = editor.getText();
+    if (!text.trim()) return;
+    setIsSummarizing(true);
+    try {
+      const summary = await summarizeText(text, settings.provider, apiKey, model, settings.language ?? 'tr');
+      const label = settings.language === 'tr' ? 'AI Özeti' : 'AI Summary';
+      const html = `<h3>${label}</h3><p>${summary.replace(/\n/g, '</p><p>')}</p><hr>`;
+      editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run();
+      toast({ title: 'Özetlendi', description: 'AI özeti notun altına eklendi.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSummarizing(false);
+    }
+  };
+
+  const handleInsertWikiLink = () => {
+    const title = window.prompt('Bağlantı verilecek not başlığını girin:');
+    if (title?.trim()) {
+      editor.chain().focus().insertContent(`[[${title.trim()}]]`).run();
+    }
+  };
+
   const handleOcrUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -264,16 +303,10 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       return;
     }
 
-    // ── Detect font SYNCHRONOUSLY at click time ─────────────────────────────
-    // 1) Cursor context is PRIMARY — reads storedMarks + marks at cursor pos.
-    //    This is what the user is actively typing with on the last line.
     const cursorStyle = editor.getAttributes('textStyle');
     let ocrFontSize   = (cursorStyle.fontSize   as string) || '';
     let ocrFontFamily = (cursorStyle.fontFamily as string) || '';
 
-    // 2) ONLY if cursor gave nothing, fall back to the last text node in the
-    //    document that carries explicit textStyle marks. Walk the whole doc but
-    //    keep overwriting so we end up with the LAST (bottom-most) value.
     if (!ocrFontSize || !ocrFontFamily) {
       let lastFs = '';
       let lastFf = '';
@@ -291,9 +324,7 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
       if (!ocrFontFamily && lastFf) ocrFontFamily = lastFf;
     }
 
-    // 3) Final fallback
     if (!ocrFontSize) ocrFontSize = '12pt';
-    // ────────────────────────────────────────────────────────────────────────
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -306,7 +337,6 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           return;
         }
 
-        // Build HTML: skip blank lines, apply captured font
         const lines = text.split('\n').filter(l => l.trim() !== '');
         const escape = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
@@ -319,19 +349,15 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           .map(l => `<p><span style="${spanStyle}">${escape(l)}</span></p>`)
           .join('');
 
-        // Insert at current cursor position if inside the document,
-        // otherwise fall back to the end of the last content node.
         const { state } = editor;
         const cursorPos = state.selection.from;
         const docSize   = state.doc.content.size;
 
-        // If cursor is at a valid inner position (not at doc boundaries), use it.
-        // Otherwise find the end of the last text node with content.
         let insertAt = (cursorPos > 0 && cursorPos < docSize) ? cursorPos : docSize;
         if (insertAt === docSize) {
           state.doc.descendants((node, pos) => {
             if (node.isTextblock && node.textContent.trim().length > 0) {
-              insertAt = pos + node.nodeSize - 1; // just before the closing tag
+              insertAt = pos + node.nodeSize - 1;
             }
           });
         }
@@ -514,16 +540,16 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Divider />
 
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'left' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left">
+        <Button variant="ghost" size="icon" className={`tbtn ${editor.getAttributes('paragraph').textAlign === 'left' || !editor.getAttributes('paragraph').textAlign ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('left').run()} title="Align left">
           <AlignLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'center' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Center">
+        <Button variant="ghost" size="icon" className={`tbtn ${editor.getAttributes('paragraph').textAlign === 'center' ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('center').run()} title="Center">
           <AlignCenter className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'right' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right">
+        <Button variant="ghost" size="icon" className={`tbtn ${editor.getAttributes('paragraph').textAlign === 'right' ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('right').run()} title="Align right">
           <AlignRight className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className={`tbtn ${isActive({ textAlign: 'justify' }) ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify">
+        <Button variant="ghost" size="icon" className={`tbtn ${editor.getAttributes('paragraph').textAlign === 'justify' ? 'tbtn-on' : ''}`} onClick={() => editor.chain().focus().setTextAlign('justify').run()} title="Justify">
           <AlignJustify className="h-3.5 w-3.5" />
         </Button>
 
@@ -543,6 +569,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertLink} title="Add link">
           <LinkIcon className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertWikiLink} title="Not bağlantısı ekle [[Not Adı]]">
+          <Link2 className="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="tbtn" onClick={() => imageInputRef.current?.click()} title="Add image">
           <ImageIcon className="h-3.5 w-3.5" />
@@ -570,6 +599,9 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
         </Button>
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Insert date">
           <CalendarDays className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="icon" className="tbtn" onClick={onOpenMath} title="Formül ekle (LaTeX)">
+          <Sigma className="h-3.5 w-3.5" />
         </Button>
 
         <Divider />
@@ -640,6 +672,38 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
 
         <Button
           variant="ghost"
+          size="icon"
+          className="tbtn"
+          onClick={onOpenVoiceRecorder}
+          title="Ses Kaydı"
+        >
+          <Mic className="h-3.5 w-3.5" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="tbtn"
+          onClick={onOpenVersionHistory}
+          title="Sürüm Geçmişi"
+        >
+          <History className="h-3.5 w-3.5" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`tbtn ${note.encrypted ? 'text-amber-500' : ''}`}
+          onClick={onOpenEncrypt}
+          title={note.encrypted ? 'Notu Kilidi Aç' : 'Notu Kilitle'}
+        >
+          {note.encrypted ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+        </Button>
+
+        <Divider />
+
+        <Button
+          variant="ghost"
           size="sm"
           className={`h-7 text-xs gap-1 px-2 ${drawMode ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30' : 'text-muted-foreground'}`}
           onClick={onToggleDrawMode}
@@ -649,6 +713,17 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
         </Button>
 
         <div className="flex-1" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-7 text-xs gap-1 px-2 ${isSummarizing ? 'opacity-70' : 'text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40'}`}
+          onClick={handleSummarize}
+          disabled={isSummarizing || isFixing || isTranslating}
+          title="AI ile özetle"
+        >
+          <FileText className={`h-3.5 w-3.5 ${isSummarizing ? 'animate-pulse' : ''}`} />
+        </Button>
 
         <Button
           variant="ghost"
@@ -670,6 +745,16 @@ export function EditorToolbar({ editor, note, drawMode, onToggleDrawMode, onAddT
           title="AI Fix"
         >
           <Wand2 className={`h-3.5 w-3.5 ${isFixing ? 'animate-pulse' : ''}`} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          className={`h-7 text-xs gap-1 px-2 ${aiChatOpen ? 'bg-primary/15 text-primary font-semibold ring-1 ring-primary/30' : 'text-muted-foreground hover:text-foreground'}`}
+          onClick={onToggleAiChat}
+          title="AI Asistan"
+        >
+          <Bot className="h-3.5 w-3.5" />
         </Button>
       </div>
 

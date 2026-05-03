@@ -35,7 +35,7 @@ const resizeHandleStyles = {
 
 const hiddenHandleStyles = Object.fromEntries(
   Object.keys(resizeHandleStyles).map(k => [k, { display: 'none' }])
-) as typeof resizeHandleStyles;
+) as unknown as typeof resizeHandleStyles;
 
 export function FloatingImage({ image, onChange, onDelete, isActive, onFocus }: Props) {
   const [aspectLocked, setAspectLocked] = useState(true);
@@ -59,7 +59,7 @@ export function FloatingImage({ image, onChange, onDelete, isActive, onFocus }: 
       resizeHandleStyles={isActive ? resizeHandleStyles : hiddenHandleStyles}
       className="absolute z-20 group select-none"
       style={{ overflow: 'visible' }}
-      onClick={e => { e.stopPropagation(); onFocus(); }}
+      onClick={(e: React.MouseEvent) => { e.stopPropagation(); onFocus(); }}
     >
       {/* Image + overlay wrapper — must NOT clip overflow so handles stick out */}
       <div

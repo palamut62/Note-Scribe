@@ -77,7 +77,7 @@ function htmlNodeToRuns(node: ChildNode): TextRun[] {
 
   if (bold || italics || underline || strike) {
     return children.map(run => new TextRun({
-      text: (run as TextRun).text ?? '',
+      text: (run as { text?: string }).text ?? '',
       bold: bold || undefined,
       italics: italics || undefined,
       underline,
@@ -97,7 +97,7 @@ function htmlToParagraphs(html: string): Paragraph[] {
     const el = node as HTMLElement;
     const tag = el.tagName.toLowerCase();
 
-    const headingMap: Record<string, HeadingLevel> = {
+    const headingMap: Record<string, typeof HeadingLevel[keyof typeof HeadingLevel]> = {
       h1: HeadingLevel.HEADING_1,
       h2: HeadingLevel.HEADING_2,
       h3: HeadingLevel.HEADING_3,

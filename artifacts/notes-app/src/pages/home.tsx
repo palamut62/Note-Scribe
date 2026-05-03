@@ -1,13 +1,17 @@
 import { useRef, useState, useEffect } from 'react';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
-import { PinnableActionId } from '@/lib/types';
+import { PinnableActionId, AppView } from '@/lib/types';
 import { TabBar } from '@/components/tab-bar';
 import { NoteEditor } from '@/components/editor/note-editor';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { PrintPreview } from '@/components/print-preview';
 import { TagBar } from '@/components/tag-bar';
 import { ClipboardHistoryBtn, useClipboardHistory } from '@/components/clipboard-history';
+import { KanbanView } from '@/components/kanban-view';
+import { CalendarView } from '@/components/calendar-view';
+import { TemplatesButton } from '@/components/templates-dialog';
+import { Sidebar } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -20,12 +24,25 @@ import {
 import {
   Download, FileText, Printer, FolderOpen, Eye,
   FileDown, Link, Filter, MoreHorizontal, Check, Pin, PinOff,
+  LayoutGrid, Calendar, FileEdit,
 } from 'lucide-react';
 import { downloadFile, extractTextFromHtml, convertHtmlToMarkdown, exportDocx, noteToShareUrl, parseShareUrl } from '@/lib/export';
 import mammoth from 'mammoth';
 
+const VIEW_ICONS: Record<AppView, React.ElementType> = {
+  editor: FileEdit,
+  kanban: LayoutGrid,
+  calendar: Calendar,
+};
+
+const VIEW_LABELS: Record<AppView, string> = {
+  editor: 'Editör',
+  kanban: 'Kanban',
+  calendar: 'Takvim',
+};
+
 export function Home() {
-  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings } = useApp();
+  const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView } = useApp();
   const t = useT();
   const activeNote = notes.find(n => n.id === activeNoteId) || null;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -121,59 +138,13 @@ export function Home() {
   };
 
   const actionDefs: ActionDef[] = [
-    {
-      id: 'open-file',
-      Icon: FolderOpen,
-      label: t('menu.open.file'),
-      ext: '.txt .md .docx',
-      requiresNote: false,
-      handler: () => fileInputRef.current?.click(),
-    },
-    {
-      id: 'save-txt',
-      Icon: FileText,
-      label: t('menu.save.txt'),
-      ext: '.txt',
-      requiresNote: true,
-      handler: handleSaveTxt,
-    },
-    {
-      id: 'save-md',
-      Icon: Download,
-      label: t('menu.save.md'),
-      ext: '.md',
-      requiresNote: true,
-      handler: handleSaveMd,
-    },
-    {
-      id: 'save-docx',
-      Icon: FileDown,
-      label: t('menu.save.docx'),
-      ext: '.docx',
-      requiresNote: true,
-      handler: handleSaveDocx,
-    },
-    {
-      id: 'share',
-      Icon: shareCopied ? Check : Link,
-      label: shareCopied ? t('menu.link.copied') : t('menu.copy.link'),
-      requiresNote: true,
-      handler: handleShare,
-    },
-    {
-      id: 'print-preview',
-      Icon: Eye,
-      label: t('menu.print.preview'),
-      requiresNote: true,
-      handler: () => setShowPrintPreview(true),
-    },
-    {
-      id: 'print-pdf',
-      Icon: Printer,
-      label: t('menu.print.pdf'),
-      requiresNote: true,
-      handler: () => window.print(),
-    },
+    { id: 'open-file', Icon: FolderOpen, label: t('menu.open.file'), ext: '.txt .md .docx', requiresNote: false, handler: () => fileInputRef.current?.click() },
+    { id: 'save-txt', Icon: FileText, label: t('menu.save.txt'), ext: '.txt', requiresNote: true, handler: handleSaveTxt },
+    { id: 'save-md', Icon: Download, label: t('menu.save.md'), ext: '.md', requiresNote: true, handler: handleSaveMd },
+    { id: 'save-docx', Icon: FileDown, label: t('menu.save.docx'), ext: '.docx', requiresNote: true, handler: handleSaveDocx },
+    { id: 'share', Icon: shareCopied ? Check : Link, label: shareCopied ? t('menu.link.copied') : t('menu.copy.link'), requiresNote: true, handler: handleShare },
+    { id: 'print-preview', Icon: Eye, label: t('menu.print.preview'), requiresNote: true, handler: () => setShowPrintPreview(true) },
+    { id: 'print-pdf', Icon: Printer, label: t('menu.print.pdf'), requiresNote: true, handler: () => window.print() },
   ];
 
   const groupedActions = [
@@ -184,16 +155,39 @@ export function Home() {
 
   const pinnedDefs = actionDefs.filter(a => pinnedActions.includes(a.id));
 
+  const showSidebar = currentView === 'editor';
+
   return (
-    <div className="app-root">
+    <div className="app-root" style={{ flexDirection: 'column' }}>
       <div className="app-menubar">
         <span className="app-title">{t('app.title')}</span>
         <div className="app-actions">
           <input ref={fileInputRef} type="file" accept=".txt,.md,.docx" className="hidden" onChange={handleOpenFile} />
 
-          <ClipboardHistoryBtn history={clipboardHistory} />
+          {/* View switcher */}
+          <div className="flex items-center gap-0.5 mr-1 border border-border rounded-md p-0.5 bg-muted/30">
+            {(['editor', 'kanban', 'calendar'] as AppView[]).map(view => {
+              const Icon = VIEW_ICONS[view];
+              return (
+                <button
+                  key={view}
+                  onClick={() => setCurrentView(view)}
+                  className={`h-6 w-6 flex items-center justify-center rounded transition-colors ${
+                    currentView === view
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title={VIEW_LABELS[view]}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Pinned action buttons */}
+          <ClipboardHistoryBtn history={clipboardHistory} />
+          <TemplatesButton />
+
           {pinnedDefs.map(({ id, Icon, label, requiresNote, handler }) => (
             <Button
               key={id}
@@ -210,12 +204,7 @@ export function Home() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                title={t('menu.import')}
-              >
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-foreground" title={t('menu.import')}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -238,30 +227,14 @@ export function Home() {
                       >
                         <def.Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                         <span className="flex-1 min-w-0 truncate">{def.label}</span>
-                        {def.ext && (
-                          <span className="text-[10px] text-muted-foreground shrink-0">{def.ext}</span>
-                        )}
+                        {def.ext && <span className="text-[10px] text-muted-foreground shrink-0">{def.ext}</span>}
                         <button
-                          className={`ml-1 p-1 rounded transition-colors shrink-0 ${
-                            pinned
-                              ? 'text-primary hover:text-primary/70'
-                              : 'text-muted-foreground/40 hover:text-muted-foreground'
-                          }`}
+                          className={`ml-1 p-1 rounded transition-colors shrink-0 ${pinned ? 'text-primary hover:text-primary/70' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
                           title={pinned ? 'Toolbardan kaldır' : 'Toolbara ekle'}
-                          onPointerDown={e => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                          }}
-                          onClick={e => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            togglePin(id as PinnableActionId);
-                          }}
+                          onPointerDown={e => { e.preventDefault(); e.stopPropagation(); }}
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); togglePin(id as PinnableActionId); }}
                         >
-                          {pinned
-                            ? <Pin className="h-3 w-3" />
-                            : <PinOff className="h-3 w-3" />
-                          }
+                          {pinned ? <Pin className="h-3 w-3" /> : <PinOff className="h-3 w-3" />}
                         </button>
                       </DropdownMenuItem>
                     );
@@ -276,9 +249,9 @@ export function Home() {
         </div>
       </div>
 
-      <TabBar />
+      {currentView === 'editor' && <TabBar />}
 
-      {(allTags.length > 0 || activeNote) && (
+      {currentView === 'editor' && (allTags.length > 0 || activeNote) && (
         <div className="global-tag-bar">
           {allTags.length > 0 && (
             <div className="global-tag-filter">
@@ -307,19 +280,31 @@ export function Home() {
         </div>
       )}
 
-      <div className="app-editor-area">
-        {activeNote && visibleNotes.some(n => n.id === activeNoteId) ? (
-          <NoteEditor note={activeNote} />
-        ) : (
-          <div className="app-empty-state">
-            <p>
-              {filterTag
-                ? t('note.filter.none', { tag: filterTag })
-                : notes.length === 0
-                  ? t('note.empty.new')
-                  : t('note.select')}
-            </p>
+      <div className="app-editor-area" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {currentView === 'editor' && (
+          <Sidebar />
+        )}
+
+        {currentView === 'editor' ? (
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {activeNote && visibleNotes.some(n => n.id === activeNoteId) ? (
+              <NoteEditor note={activeNote} />
+            ) : (
+              <div className="app-empty-state">
+                <p>
+                  {filterTag
+                    ? t('note.filter.none', { tag: filterTag })
+                    : notes.length === 0
+                      ? t('note.empty.new')
+                      : t('note.select')}
+                </p>
+              </div>
+            )}
           </div>
+        ) : currentView === 'kanban' ? (
+          <KanbanView />
+        ) : (
+          <CalendarView />
         )}
       </div>
 

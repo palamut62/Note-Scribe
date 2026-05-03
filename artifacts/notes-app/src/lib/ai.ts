@@ -1,10 +1,7 @@
 const PROXY_BASE = '/api/ai-proxy';
 
-// Best NVIDIA NIM vision model for OCR (prefix is meta/, not nvidia/)
 const OCR_MODEL = 'meta/llama-3.2-11b-vision-instruct';
 
-/** Resize + compress image to JPEG ≤ 1024 px on longest side, quality 0.82.
- *  NVIDIA NIM has a ~180 KB base64 payload limit per image. */
 export function resizeImageForOcr(dataUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -33,7 +30,6 @@ export async function ocrImage(
 ): Promise<string> {
   if (!apiKey) throw new Error('NVIDIA API key required');
 
-  // Compress before sending to avoid 502 / payload-too-large
   const compressed = await resizeImageForOcr(imageDataUrl);
 
   const response = await fetch(`${PROXY_BASE}/chat?provider=nvidia`, {
@@ -209,4 +205,130 @@ export async function fetchModels(
   } else {
     return (data.data || []).map((m: any) => ({ id: m.id, name: m.id }));
   }
+}
+
+export async function summarizeText(
+  text: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string,
+  lang: 'tr' | 'en' = 'tr'
+): Promise<string> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  if (!model) throw new Error('Model seçimi gerekli');
+
+  const prompt = lang === 'tr'
+    ? `Aşağıdaki metni 3-5 madde halinde özetle. Yalnızca özeti döndür:\n\n${text}`
+    : `Summarize the following text in 3-5 bullet points. Return only the summary:\n\n${text}`;
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
+    throw new Error(`API Hatası (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
+}
+
+export async function suggestTags(
+  text: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string,
+  lang: 'tr' | 'en' = 'tr'
+): Promise<string[]> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  if (!model) throw new Error('Model seçimi gerekli');
+
+  const prompt = lang === 'tr'
+    ? `Aşağıdaki nota uygun 3-5 adet etiket öner. Etiketler tek kelime veya kısa ifade olmalı. Sadece etiketleri virgülle ayrılmış şekilde döndür, başka hiçbir şey yazma:\n\n${text}`
+    : `Suggest 3-5 tags for the following note. Tags should be single words or short phrases. Return only the tags, comma-separated, nothing else:\n\n${text}`;
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 100,
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
+    throw new Error(`API Hatası (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  const raw = (data.choices?.[0]?.message?.content || '').trim();
+  return raw.split(',').map((t: string) => t.trim().toLowerCase()).filter((t: string) => t.length > 0);
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export async function chatWithNote(
+  messages: ChatMessage[],
+  noteContent: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string,
+  lang: 'tr' | 'en' = 'tr'
+): Promise<string> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  if (!model) throw new Error('Model seçimi gerekli');
+
+  const systemPrompt = lang === 'tr'
+    ? `Sen bir not asistanısın. Kullanıcının notu şu:\n\n${noteContent}\n\nBu nota dayanarak soruları yanıtla.`
+    : `You are a note assistant. The user's note is:\n\n${noteContent}\n\nAnswer questions based on this note.`;
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.message || detail;
+    } catch {}
+    throw new Error(`API Hatası (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
 }

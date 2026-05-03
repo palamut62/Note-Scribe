@@ -10,6 +10,8 @@ import TaskItem from '@tiptap/extension-task-item';
 import { FontFamily } from '@tiptap/extension-font-family';
 import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
+import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+import { common, createLowlight } from 'lowlight';
 import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
@@ -21,13 +23,23 @@ import { HeaderFooterBar } from './header-footer-bar';
 import { AutoCorrectExtension } from './auto-correct-extension';
 import { DrawingCanvas, DrawingCanvasHandle } from '@/components/drawing/drawing-canvas';
 import { DrawingToolbar } from '@/components/drawing/drawing-toolbar';
+import { WikiLinkExtension } from './wiki-link-extension';
+import { AiChatPanel } from '@/components/ai-chat-panel';
+import { VoiceRecorderDialog } from '@/components/voice-recorder';
+import { VersionHistoryDialog } from '@/components/version-history-dialog';
+import { NoteEncryptDialog } from '@/components/note-encrypt-dialog';
+import { MathInsertDialog } from '@/components/math-insert-dialog';
+import { Lock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+const lowlight = createLowlight(common);
 
 interface Props {
   note: Note;
 }
 
-const PAGE_H = 1123;   // A4 height at 96 dpi
-const SEP_H  = 21;     // separator band height (must match CSS gradient gap)
+const PAGE_H = 1123;
+const SEP_H  = 21;
 
 function resolveHFTokens(text: string, title: string, page: number): string {
   const today = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -87,7 +99,7 @@ function PageOverlays({
   pageRef, header, footer, noteTitle,
   marginLeft, marginRight, marginTop, marginBottom, showBorder, bgClass,
 }: {
-  pageRef: React.RefObject<HTMLDivElement>;
+  pageRef: React.RefObject<HTMLDivElement | null>;
   header: HeaderFooter; footer: HeaderFooter;
   noteTitle: string;
   marginLeft: number; marginRight: number; marginTop: number; marginBottom: number;
@@ -180,6 +192,7 @@ function SaveIndicator({ updatedAt }: { updatedAt: string }) {
       const timer = setTimeout(() => setVisible(false), 2000);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [updatedAt]);
   return (
     <span className={`save-indicator ${visible ? 'save-indicator-show' : ''}`}>
@@ -193,7 +206,7 @@ function countWords(text: string): number {
 }
 
 export function NoteEditor({ note }: Props) {
-  const { updateNote, settings } = useApp();
+  const { updateNote, settings, notes, setActiveNoteId } = useApp();
   const t = useT();
   const [activeTextboxId, setActiveTextboxId] = useState<string | null>(null);
   const [activeImageId, setActiveImageId] = useState<string | null>(null);
@@ -207,10 +220,17 @@ export function NoteEditor({ note }: Props) {
   const drawCanvasRef = useRef<DrawingCanvasHandle>(null);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
-  const pageRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  const currentNoteIdRef = useRef<string | null>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
   const [pageMinH, setPageMinH] = useState(PAGE_H);
   const pageMinHRef = useRef(PAGE_H);
+
+  const [showAiChat, setShowAiChat] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showEncrypt, setShowEncrypt] = useState(false);
+  const [showMath, setShowMath] = useState(false);
 
   useEffect(() => {
     const el = editorContentRef.current;
@@ -233,7 +253,9 @@ export function NoteEditor({ note }: Props) {
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
         link: { openOnClick: false, autolink: true },
+        codeBlock: false,
       }),
+      CodeBlockLowlight.configure({ lowlight }),
       TextStyle,
       Color,
       Highlight.configure({ multicolor: true }),
@@ -257,6 +279,15 @@ export function NoteEditor({ note }: Props) {
           };
         },
       }),
+      WikiLinkExtension.configure({
+        getNoteByTitle: (title: string) => {
+          const lower = title.toLowerCase();
+          return notes.find(n => n.title.toLowerCase() === lower);
+        },
+        onLinkClick: (noteId: string) => {
+          setActiveNoteId(noteId);
+        },
+      }),
     ],
     content: note.content,
     editorProps: {
@@ -272,10 +303,10 @@ export function NoteEditor({ note }: Props) {
 
   useEffect(() => {
     if (editor) {
-      const isSameNote = editor.storage.currentNoteId === note.id;
+      const isSameNote = currentNoteIdRef.current === note.id;
       if (!isSameNote) {
         editor.commands.setContent(note.content || '');
-        editor.storage.currentNoteId = note.id;
+        currentNoteIdRef.current = note.id;
         const text = editor.getText();
         setWordCount(countWords(text));
         setCharCount(text.length);
@@ -285,8 +316,8 @@ export function NoteEditor({ note }: Props) {
   }, [note.id]);
 
   useEffect(() => {
-    if (editor && !editor.storage.currentNoteId) {
-      editor.storage.currentNoteId = note.id;
+    if (editor && !currentNoteIdRef.current) {
+      currentNoteIdRef.current = note.id;
       const text = editor.getText();
       setWordCount(countWords(text));
       setCharCount(text.length);
@@ -390,8 +421,23 @@ export function NoteEditor({ note }: Props) {
   const safeHeader: HeaderFooter = migrateHF(note.header);
   const safeFooter: HeaderFooter = migrateHF(note.footer, '{sayfa}');
 
+  if (note.encrypted) {
+    return (
+      <div className="editor-shell">
+        <div className="flex flex-col items-center justify-center flex-1 gap-4 text-muted-foreground">
+          <Lock className="h-12 w-12 opacity-30" />
+          <div className="text-sm font-medium">Bu not kilitli.</div>
+          <Button variant="outline" size="sm" onClick={() => setShowEncrypt(true)}>
+            Kilidi Aç
+          </Button>
+        </div>
+        <NoteEncryptDialog note={note} open={showEncrypt} onClose={() => setShowEncrypt(false)} />
+      </div>
+    );
+  }
+
   return (
-    <div className="editor-shell">
+    <div className="editor-shell" style={{ display: 'flex', flexDirection: 'column' }}>
       <EditorToolbar
         editor={editor}
         note={note}
@@ -400,6 +446,12 @@ export function NoteEditor({ note }: Props) {
         onAddTextbox={handleAddTextbox}
         onAddImage={handleAddImage}
         onToggleFindReplace={() => setShowFindReplace(v => !v)}
+        onOpenMath={() => setShowMath(true)}
+        onOpenVoiceRecorder={() => setShowVoiceRecorder(true)}
+        onOpenVersionHistory={() => setShowVersionHistory(true)}
+        onOpenEncrypt={() => setShowEncrypt(true)}
+        onToggleAiChat={() => setShowAiChat(v => !v)}
+        aiChatOpen={showAiChat}
       />
 
       {showFindReplace && (
@@ -426,8 +478,6 @@ export function NoteEditor({ note }: Props) {
             const pw = page.offsetWidth;
             const ph = page.offsetHeight;
 
-            // 1. Temporarily hide the drawing canvas so html2canvas
-            //    only captures text/layout (avoids compositing bugs)
             const drawEl = drawCanvasRef.current?.getCanvas();
             if (drawEl) drawEl.style.visibility = 'hidden';
 
@@ -443,17 +493,13 @@ export function NoteEditor({ note }: Props) {
 
             if (drawEl) drawEl.style.visibility = '';
 
-            // 2. Create final composite canvas
             const final = document.createElement('canvas');
             final.width  = pw * SCALE;
             final.height = ph * SCALE;
             const ctx = final.getContext('2d')!;
 
-            // Draw the page (text / layout)
             ctx.drawImage(pageSnapshot, 0, 0);
 
-            // 3. Render drawing ops into a 1× canvas then scale-blit onto final
-            //    so coordinates stay pixel-perfect at any DPR / scale
             const tmp = document.createElement('canvas');
             tmp.width  = pw;
             tmp.height = ph;
@@ -468,112 +514,133 @@ export function NoteEditor({ note }: Props) {
         />
       )}
 
-      <div
-        className="editor-scroll"
-        onClick={drawMode ? undefined : handlePageClick}
-        style={{ cursor: drawMode ? 'default' : undefined }}
-      >
-        <div className="editor-page" ref={pageRef} style={{ minHeight: pageMinH }}>
-          <DrawingCanvas
-            ref={drawCanvasRef}
-            ops={note.drawOps ?? []}
-            onOpsChange={ops => updateNote(note.id, { drawOps: ops })}
-            tool={drawTool}
-            color={drawColor}
-            strokeWidth={drawWidth}
-            active={drawMode}
-          />
-          <PageOverlays
-            pageRef={pageRef}
-            header={safeHeader}
-            footer={safeFooter}
-            noteTitle={note.title}
-            marginLeft={settings.marginLeft ?? 80}
-            marginRight={settings.marginRight ?? 80}
-            marginTop={settings.marginTop ?? 80}
-            marginBottom={settings.marginBottom ?? 120}
-            showBorder={settings.backgroundPattern === 'grid'}
-            bgClass={bgClass || undefined}
-          />
-          {bgClass && (
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div
+          className="editor-scroll"
+          style={{ flex: 1, overflow: 'auto' }}
+          onClick={drawMode ? undefined : handlePageClick}
+        >
+          <div className="editor-page" ref={pageRef} style={{ minHeight: pageMinH }}>
+            <DrawingCanvas
+              ref={drawCanvasRef}
+              ops={note.drawOps ?? []}
+              onOpsChange={ops => updateNote(note.id, { drawOps: ops })}
+              tool={drawTool}
+              color={drawColor}
+              strokeWidth={drawWidth}
+              active={drawMode}
+            />
+            <PageOverlays
+              pageRef={pageRef}
+              header={safeHeader}
+              footer={safeFooter}
+              noteTitle={note.title}
+              marginLeft={settings.marginLeft ?? 80}
+              marginRight={settings.marginRight ?? 80}
+              marginTop={settings.marginTop ?? 80}
+              marginBottom={settings.marginBottom ?? 120}
+              showBorder={settings.backgroundPattern === 'grid'}
+              bgClass={bgClass || undefined}
+            />
+            {bgClass && (
+              <div
+                className={`page-pattern-overlay ${bgClass}`}
+                style={{
+                  top: settings.marginTop ?? 80,
+                  height: PAGE_H - (settings.marginTop ?? 80) - (settings.marginBottom ?? 120),
+                  left: settings.marginLeft ?? 80,
+                  right: settings.marginRight ?? 80,
+                }}
+              />
+            )}
+            {note.textboxes.map(tb => (
+              <FloatingTextbox
+                key={tb.id}
+                textbox={tb}
+                onChange={updateTextbox}
+                onDelete={deleteTextbox}
+                isActive={activeTextboxId === tb.id}
+                onFocus={() => { setActiveTextboxId(tb.id); setActiveImageId(null); }}
+              />
+            ))}
+            {(note.images ?? []).map(img => (
+              <FloatingImageComponent
+                key={img.id}
+                image={img}
+                onChange={updateImage}
+                onDelete={deleteImage}
+                isActive={activeImageId === img.id}
+                onFocus={() => { setActiveImageId(img.id); setActiveTextboxId(null); }}
+              />
+            ))}
+            <HeaderFooterBar
+              data={safeHeader}
+              type="header"
+              noteTitle={note.title}
+              pageNumber={1}
+              marginLeft={settings.marginLeft ?? 80}
+              marginRight={settings.marginRight ?? 80}
+              height={settings.marginTop ?? 80}
+              onChange={u => updateNote(note.id, { header: { ...safeHeader, ...u } })}
+            />
+
             <div
-              className={`page-pattern-overlay ${bgClass}`}
+              ref={editorContentRef}
+              className="editor-content-area"
               style={{
-                top: settings.marginTop ?? 80,
-                height: PAGE_H - (settings.marginTop ?? 80) - (settings.marginBottom ?? 120),
-                left: settings.marginLeft ?? 80,
-                right: settings.marginRight ?? 80,
+                paddingTop: settings.marginTop ?? 80,
+                paddingBottom: settings.marginBottom ?? 120,
+                paddingLeft: settings.marginLeft ?? 80,
+                paddingRight: settings.marginRight ?? 80,
+                pointerEvents: drawMode ? 'none' : undefined,
               }}
-            />
-          )}
-          {note.textboxes.map(tb => (
-            <FloatingTextbox
-              key={tb.id}
-              textbox={tb}
-              onChange={updateTextbox}
-              onDelete={deleteTextbox}
-              isActive={activeTextboxId === tb.id}
-              onFocus={() => { setActiveTextboxId(tb.id); setActiveImageId(null); }}
-            />
-          ))}
-          {(note.images ?? []).map(img => (
-            <FloatingImageComponent
-              key={img.id}
-              image={img}
-              onChange={updateImage}
-              onDelete={deleteImage}
-              isActive={activeImageId === img.id}
-              onFocus={() => { setActiveImageId(img.id); setActiveTextboxId(null); }}
-            />
-          ))}
-          {/* Header */}
-          <HeaderFooterBar
-            data={safeHeader}
-            type="header"
-            noteTitle={note.title}
-            pageNumber={1}
-            marginLeft={settings.marginLeft ?? 80}
-            marginRight={settings.marginRight ?? 80}
-            height={settings.marginTop ?? 80}
-            onChange={u => updateNote(note.id, { header: { ...safeHeader, ...u } })}
-          />
+            >
+              <EditorContent editor={editor} />
+            </div>
 
-          <div
-            ref={editorContentRef}
-            className="editor-content-area"
-            style={{
-              paddingTop: settings.marginTop ?? 80,
-              paddingBottom: settings.marginBottom ?? 120,
-              paddingLeft: settings.marginLeft ?? 80,
-              paddingRight: settings.marginRight ?? 80,
-              pointerEvents: drawMode ? 'none' : undefined,
-            }}
-          >
-            <EditorContent editor={editor} />
+            <HeaderFooterBar
+              data={safeFooter}
+              type="footer"
+              noteTitle={note.title}
+              pageNumber={1}
+              marginLeft={settings.marginLeft ?? 80}
+              marginRight={settings.marginRight ?? 80}
+              height={settings.marginBottom ?? 120}
+              topOverride={PAGE_H - (settings.marginBottom ?? 120)}
+              onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
+            />
           </div>
-
-          {/* Footer — pinned to bottom of page 1 */}
-          <HeaderFooterBar
-            data={safeFooter}
-            type="footer"
-            noteTitle={note.title}
-            pageNumber={1}
-            marginLeft={settings.marginLeft ?? 80}
-            marginRight={settings.marginRight ?? 80}
-            height={settings.marginBottom ?? 120}
-            topOverride={PAGE_H - (settings.marginBottom ?? 120)}
-            onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
-          />
         </div>
+
+        {showAiChat && (
+          <AiChatPanel note={note} onClose={() => setShowAiChat(false)} />
+        )}
       </div>
 
       <div className="editor-statusbar">
         <span>{t('status.words', { n: wordCount })}</span>
         <span className="mx-2 opacity-40">·</span>
         <span>{t('status.chars', { n: charCount })}</span>
+        {note.audioClips && note.audioClips.length > 0 && (
+          <>
+            <span className="mx-2 opacity-40">·</span>
+            <span className="text-primary/70">🎤 {note.audioClips.length}</span>
+          </>
+        )}
+        {note.versionHistory && note.versionHistory.length > 0 && (
+          <>
+            <span className="mx-2 opacity-40">·</span>
+            <span className="opacity-50 text-[10px]">v{note.versionHistory.length}</span>
+          </>
+        )}
         <SaveIndicator updatedAt={note.updatedAt} />
-        <span className="ml-auto opacity-40 text-[10px] tracking-wide">v1.0.0</span>
+        <span className="ml-auto opacity-40 text-[10px] tracking-wide">v2.0.0</span>
       </div>
+
+      <VoiceRecorderDialog note={note} open={showVoiceRecorder} onClose={() => setShowVoiceRecorder(false)} />
+      <VersionHistoryDialog note={note} open={showVersionHistory} onClose={() => setShowVersionHistory(false)} />
+      <NoteEncryptDialog note={note} open={showEncrypt} onClose={() => setShowEncrypt(false)} />
+      <MathInsertDialog open={showMath} onClose={() => setShowMath(false)} editor={editor} />
     </div>
   );
 }

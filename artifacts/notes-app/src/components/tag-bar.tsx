@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { X, Tag } from 'lucide-react';
+import { X, Tag, Sparkles } from 'lucide-react';
 import { useApp } from '@/lib/app-state';
+import { suggestTags } from '@/lib/ai';
+import { useToast } from '@/hooks/use-toast';
 
 const TAG_COLORS = [
   '#ef4444','#f97316','#eab308','#22c55e',
@@ -21,10 +23,19 @@ interface TagBarProps {
   allTags: string[];
 }
 
+function extractText(html: string): string {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.textContent || div.innerText || '';
+}
+
 export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBarProps) {
-  const { updateNote } = useApp();
+  const { updateNote, notes, settings } = useApp();
+  const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const [inputVal, setInputVal] = useState('');
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -50,9 +61,39 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
     if (e.key === 'Escape') { setAdding(false); setInputVal(''); }
   };
 
+  const handleSuggestTags = async () => {
+    const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
+    if (!apiKey || !model) {
+      toast({ title: 'AI Yapılandırılmamış', description: 'Ayarlardan API anahtarı ve model seçin.', variant: 'destructive' });
+      return;
+    }
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    const text = extractText(note.content);
+    if (!text.trim()) return;
+
+    setIsSuggesting(true);
+    try {
+      const suggested = await suggestTags(text, settings.provider, apiKey, model, settings.language ?? 'tr');
+      const newTags = suggested.filter(s => !tags.includes(s));
+      setSuggestions(newTags);
+    } catch (err: any) {
+      toast({ title: 'Hata', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const addSuggestedTag = (tag: string) => {
+    if (!tags.includes(tag)) {
+      updateNote(noteId, { tags: [...tags, tag] });
+    }
+    setSuggestions(prev => prev.filter(s => s !== tag));
+  };
+
   return (
     <div className="tag-bar">
-      {/* Note's own tags */}
       <div className="tag-bar-note-tags">
         <Tag size={11} className="tag-bar-icon" />
         {tags.map(tag => (
@@ -67,6 +108,18 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
             </button>
           </span>
         ))}
+
+        {suggestions.map(tag => (
+          <button
+            key={`sug-${tag}`}
+            className="tag-suggestion-pill"
+            onClick={() => addSuggestedTag(tag)}
+            title="Eklemek için tıkla"
+          >
+            + {tag}
+          </button>
+        ))}
+
         {adding ? (
           <input
             ref={inputRef}
@@ -83,6 +136,16 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
             + Etiket
           </button>
         )}
+
+        <button
+          className={`tag-ai-btn ${isSuggesting ? 'tag-ai-btn-loading' : ''}`}
+          onClick={handleSuggestTags}
+          disabled={isSuggesting}
+          title="AI ile etiket öner"
+        >
+          <Sparkles size={10} className={isSuggesting ? 'animate-pulse' : ''} />
+        </button>
+
         {adding && allTags.length > 0 && (
           <datalist id="tag-suggestions">
             {allTags.filter(t => !tags.includes(t)).map(t => <option key={t} value={t} />)}
@@ -90,7 +153,6 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
         )}
       </div>
 
-      {/* Active filter indicator */}
       {filterTag && (
         <span className="tag-filter-indicator">
           <span style={{ color: tagColor(filterTag) }}>#{filterTag}</span> filtresi aktif

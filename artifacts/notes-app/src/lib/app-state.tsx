@@ -1,17 +1,38 @@
 // @refresh reset
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Note, Settings } from './types';
+import { Note, Settings, Folder, VersionSnapshot, AppView, SortBy, SortDir } from './types';
+
+const MAX_VERSIONS = 20;
 
 interface AppContextType {
   notes: Note[];
+  folders: Folder[];
   activeNoteId: string | null;
   settings: Settings;
+  currentView: AppView;
+  searchQuery: string;
+  sortBy: SortBy;
+  sortDir: SortDir;
+  activeFolderId: string | null;
   setActiveNoteId: (id: string | null) => void;
-  createNote: (initial?: { title?: string; content?: string; tags?: string[] }) => void;
+  setCurrentView: (view: AppView) => void;
+  setSearchQuery: (q: string) => void;
+  setSortBy: (s: SortBy) => void;
+  setSortDir: (d: SortDir) => void;
+  setActiveFolderId: (id: string | null) => void;
+  createNote: (initial?: { title?: string; content?: string; tags?: string[]; folderId?: string }) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
   deleteNote: (id: string) => void;
   updateSettings: (updates: Partial<Settings>) => void;
   reorderNotes: (fromIndex: number, toIndex: number) => void;
+  createFolder: (name: string, color?: string) => Folder;
+  deleteFolder: (id: string) => void;
+  renameFolder: (id: string, name: string) => void;
+  moveNoteToFolder: (noteId: string, folderId: string | undefined) => void;
+  saveVersion: (noteId: string, label?: string) => void;
+  restoreVersion: (noteId: string, versionId: string) => void;
+  deleteVersion: (noteId: string, versionId: string) => void;
+  togglePinNote: (noteId: string) => void;
 }
 
 const defaultSettings: Settings = {
@@ -29,6 +50,9 @@ const defaultSettings: Settings = {
   autoCorrect: false,
   language: 'tr',
   pinnedActions: [],
+  sortBy: 'updatedAt',
+  sortDir: 'desc',
+  currentView: 'editor',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -39,13 +63,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem('notlar-notes');
       if (!saved) return [];
       const parsed: Note[] = JSON.parse(saved);
-      return parsed.map(n => ({ tags: [], drawOps: [], ...n }));
+      return parsed.map(n => ({ ...n, tags: n.tags ?? [], drawOps: n.drawOps ?? [] }));
+    } catch {
+      return [];
+    }
+  });
+
+  const [folders, setFolders] = useState<Folder[]>(() => {
+    try {
+      const saved = localStorage.getItem('notlar-folders');
+      return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
 
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
+  const [currentView, setCurrentView] = useState<AppView>('editor');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortBy>('updatedAt');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<Settings>(() => {
     try {
@@ -61,6 +99,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [notes]);
 
   useEffect(() => {
+    localStorage.setItem('notlar-folders', JSON.stringify(folders));
+  }, [folders]);
+
+  useEffect(() => {
     localStorage.setItem('notes-settings', JSON.stringify(settings));
   }, [settings]);
 
@@ -74,7 +116,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.theme]);
 
-  const createNote = useCallback((initial?: { title?: string; content?: string; tags?: string[] }) => {
+  const createNote = useCallback((initial?: { title?: string; content?: string; tags?: string[]; folderId?: string }) => {
     const newNote: Note = {
       id: crypto.randomUUID(),
       title: initial?.title || 'Untitled Note',
@@ -87,6 +129,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       footer: { left: { text: '' }, center: { text: '{sayfa}' }, right: { text: '' }, visible: false },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      folderId: initial?.folderId ?? undefined,
+      status: 'todo',
+      versionHistory: [],
+      audioClips: [],
+      isPinned: false,
     };
     setNotes(prev => [newNote, ...prev]);
     setActiveNoteId(newNote.id);
@@ -120,18 +167,96 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const createFolder = useCallback((name: string, color = '#3b82f6'): Folder => {
+    const folder: Folder = {
+      id: crypto.randomUUID(),
+      name,
+      color,
+      createdAt: new Date().toISOString(),
+    };
+    setFolders(prev => [...prev, folder]);
+    return folder;
+  }, []);
+
+  const deleteFolder = useCallback((id: string) => {
+    setFolders(prev => prev.filter(f => f.id !== id));
+    setNotes(prev => prev.map(n => n.folderId === id ? { ...n, folderId: undefined } : n));
+  }, []);
+
+  const renameFolder = useCallback((id: string, name: string) => {
+    setFolders(prev => prev.map(f => f.id === id ? { ...f, name } : f));
+  }, []);
+
+  const moveNoteToFolder = useCallback((noteId: string, folderId: string | undefined) => {
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, folderId, updatedAt: new Date().toISOString() } : n));
+  }, []);
+
+  const saveVersion = useCallback((noteId: string, label?: string) => {
+    setNotes(prev => prev.map(note => {
+      if (note.id !== noteId) return note;
+      const snap: VersionSnapshot = {
+        id: crypto.randomUUID(),
+        content: note.content,
+        title: note.title,
+        savedAt: new Date().toISOString(),
+        label,
+      };
+      const history = [...(note.versionHistory ?? []), snap].slice(-MAX_VERSIONS);
+      return { ...note, versionHistory: history };
+    }));
+  }, []);
+
+  const restoreVersion = useCallback((noteId: string, versionId: string) => {
+    setNotes(prev => prev.map(note => {
+      if (note.id !== noteId) return note;
+      const snap = (note.versionHistory ?? []).find(v => v.id === versionId);
+      if (!snap) return note;
+      return { ...note, content: snap.content, title: snap.title, updatedAt: new Date().toISOString() };
+    }));
+  }, []);
+
+  const deleteVersion = useCallback((noteId: string, versionId: string) => {
+    setNotes(prev => prev.map(note => {
+      if (note.id !== noteId) return note;
+      return { ...note, versionHistory: (note.versionHistory ?? []).filter(v => v.id !== versionId) };
+    }));
+  }, []);
+
+  const togglePinNote = useCallback((noteId: string) => {
+    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, isPinned: !n.isPinned } : n));
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
         notes,
+        folders,
         activeNoteId,
         settings,
+        currentView,
+        searchQuery,
+        sortBy,
+        sortDir,
+        activeFolderId,
         setActiveNoteId,
+        setCurrentView,
+        setSearchQuery,
+        setSortBy,
+        setSortDir,
+        setActiveFolderId,
         createNote,
         updateNote,
         deleteNote,
         updateSettings,
         reorderNotes,
+        createFolder,
+        deleteFolder,
+        renameFolder,
+        moveNoteToFolder,
+        saveVersion,
+        restoreVersion,
+        deleteVersion,
+        togglePinNote,
       }}
     >
       {children}
