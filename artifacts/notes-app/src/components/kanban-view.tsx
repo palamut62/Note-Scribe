@@ -82,7 +82,7 @@ function NoteCard({ note, colConfigs, onOpen }: NoteCardProps) {
 }
 
 export function KanbanView() {
-  const { notes, createNote, updateNote, setActiveNoteId } = useApp();
+  const { notes, createNote, updateNote, setActiveNoteId, setCurrentView } = useApp();
   const t = useT();
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<NoteStatus | null>(null);
@@ -139,7 +139,7 @@ export function KanbanView() {
                     onDragEnd={handleDragEnd}
                     className={draggedNoteId === note.id ? 'opacity-50' : ''}
                   >
-                    <NoteCard note={note} colConfigs={COL_CONFIG} onOpen={() => setActiveNoteId(note.id)} />
+                    <NoteCard note={note} colConfigs={COL_CONFIG} onOpen={() => { setActiveNoteId(note.id); setCurrentView('editor'); }} />
                   </div>
                 ))}
                 {colNotes.length === 0 && (

@@ -7,7 +7,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday
 import { tr as dateFnsTr, enUS as dateFnsEn } from 'date-fns/locale';
 
 export function CalendarView() {
-  const { notes, setActiveNoteId, settings } = useApp();
+  const { notes, setActiveNoteId, setCurrentView, settings } = useApp();
   const t = useT();
   const lang = settings.language ?? 'tr';
   const dateFnsLocale = lang === 'tr' ? dateFnsTr : dateFnsEn;
@@ -115,7 +115,7 @@ export function CalendarView() {
                   <button
                     key={note.id}
                     className="w-full text-left p-3 rounded-lg border border-border hover:border-primary/30 hover:bg-accent/30 transition-colors"
-                    onClick={() => setActiveNoteId(note.id)}
+                    onClick={() => { setActiveNoteId(note.id); setCurrentView('editor'); }}
                   >
                     <div className="font-medium text-sm truncate mb-0.5">{note.title}</div>
                     <div className="text-xs text-muted-foreground">
