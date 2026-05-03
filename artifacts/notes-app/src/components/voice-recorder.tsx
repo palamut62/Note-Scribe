@@ -4,14 +4,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { Note, AudioClip } from '@/lib/types';
-import { Mic, Square, Play, Pause, Trash2, MicOff } from 'lucide-react';
+import { Mic, Square, Play, Pause, Trash2, MicOff, Wand2, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Editor } from '@tiptap/react';
+import { transcribeAudio, fixText } from '@/lib/ai';
 
 interface Props {
   note: Note;
   open: boolean;
   onClose: () => void;
+  editor?: Editor | null;
 }
+
+type TranscribeState = 'idle' | 'transcribing' | 'fixing' | 'done' | 'error';
 
 function formatDuration(s: number): string {
   const m = Math.floor(s / 60);
@@ -54,12 +59,32 @@ function AudioPlayer({ clip }: { clip: AudioClip }) {
   );
 }
 
-export function VoiceRecorderDialog({ note, open, onClose }: Props) {
-  const { updateNote } = useApp();
+function insertAfterLastEmptyLine(editor: Editor, text: string) {
+  const doc = editor.state.doc;
+  let lastEmptyPos = -1;
+
+  doc.forEach((node, pos) => {
+    if (node.type.name === 'paragraph' && node.content.size === 0) {
+      lastEmptyPos = pos + node.nodeSize;
+    }
+  });
+
+  if (lastEmptyPos !== -1) {
+    editor.chain().focus().setTextSelection(lastEmptyPos).insertContent(`<p>${text}</p>`).run();
+  } else {
+    const endPos = doc.content.size;
+    editor.chain().focus().setTextSelection(endPos - 1).insertContent(`<p></p><p>${text}</p>`).run();
+  }
+}
+
+export function VoiceRecorderDialog({ note, open, onClose, editor }: Props) {
+  const { updateNote, settings } = useApp();
   const t = useT();
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [supported, setSupported] = useState(true);
+  const [transcribeStates, setTranscribeStates] = useState<Record<string, TranscribeState>>({});
+  const [transcribeErrors, setTranscribeErrors] = useState<Record<string, string>>({});
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -114,6 +139,48 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
 
   const deleteClip = (clipId: string) => {
     updateNote(note.id, { audioClips: (note.audioClips ?? []).filter(c => c.id !== clipId) });
+    setTranscribeStates(prev => { const s = { ...prev }; delete s[clipId]; return s; });
+    setTranscribeErrors(prev => { const s = { ...prev }; delete s[clipId]; return s; });
+  };
+
+  const handleTranscribe = async (clip: AudioClip) => {
+    const provider = settings.provider ?? 'openrouter';
+    const apiKey = provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model = provider === 'openrouter' ? settings.openrouterModel : settings.nvidiaModel;
+
+    if (!apiKey) {
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'error' }));
+      setTranscribeErrors(prev => ({ ...prev, [clip.id]: t('voice.no.api.key') }));
+      return;
+    }
+    if (provider !== 'openrouter') {
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'error' }));
+      setTranscribeErrors(prev => ({ ...prev, [clip.id]: t('voice.openrouter.only') }));
+      return;
+    }
+
+    try {
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'transcribing' }));
+      setTranscribeErrors(prev => { const s = { ...prev }; delete s[clip.id]; return s; });
+
+      const rawText = await transcribeAudio(clip.dataUrl, provider, apiKey);
+
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'fixing' }));
+
+      const fixedText = model
+        ? await fixText(rawText, provider, apiKey, model)
+        : rawText;
+
+      if (editor) {
+        insertAfterLastEmptyLine(editor, fixedText);
+      }
+
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'done' }));
+      setTimeout(() => setTranscribeStates(prev => ({ ...prev, [clip.id]: 'idle' })), 3000);
+    } catch (err: any) {
+      setTranscribeStates(prev => ({ ...prev, [clip.id]: 'error' }));
+      setTranscribeErrors(prev => ({ ...prev, [clip.id]: err.message || t('voice.transcribe.error') }));
+    }
   };
 
   const clips = note.audioClips ?? [];
@@ -160,21 +227,69 @@ export function VoiceRecorderDialog({ note, open, onClose }: Props) {
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
                   {t('voice.recordings')}
                 </div>
-                {clips.map(clip => (
-                  <div key={clip.id} className="border border-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium truncate flex-1">{clip.name}</span>
-                      <button
-                        onClick={() => deleteClip(clip.id)}
-                        className="text-muted-foreground hover:text-destructive ml-2 shrink-0"
-                        title={t('voice.delete')}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                {clips.map(clip => {
+                  const state: TranscribeState = transcribeStates[clip.id] ?? 'idle';
+                  const errMsg = transcribeErrors[clip.id];
+                  const busy = state === 'transcribing' || state === 'fixing';
+                  return (
+                    <div key={clip.id} className="border border-border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium truncate flex-1">{clip.name}</span>
+                        <button
+                          onClick={() => deleteClip(clip.id)}
+                          className="text-muted-foreground hover:text-destructive ml-2 shrink-0"
+                          title={t('voice.delete')}
+                          disabled={busy}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <AudioPlayer clip={clip} />
+
+                      {/* Transcribe button + status */}
+                      {editor && (
+                        <div className="pt-1">
+                          {state === 'idle' && (
+                            <button
+                              onClick={() => handleTranscribe(clip)}
+                              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                            >
+                              <Wand2 className="h-3 w-3" />
+                              {t('voice.transcribe')}
+                            </button>
+                          )}
+                          {busy && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              {state === 'transcribing' ? t('voice.transcribing') : t('voice.ai.fixing')}
+                            </div>
+                          )}
+                          {state === 'done' && (
+                            <div className="flex items-center gap-1.5 text-xs text-green-600">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {t('voice.inserted')}
+                            </div>
+                          )}
+                          {state === 'error' && (
+                            <div className="space-y-1">
+                              <div className="flex items-start gap-1.5 text-xs text-destructive">
+                                <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                                <span>{errMsg || t('voice.transcribe.error')}</span>
+                              </div>
+                              <button
+                                onClick={() => setTranscribeStates(prev => ({ ...prev, [clip.id]: 'idle' }))}
+                                className="text-xs text-muted-foreground underline hover:text-foreground"
+                              >
+                                Tekrar dene
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <AudioPlayer clip={clip} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

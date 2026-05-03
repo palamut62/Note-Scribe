@@ -88,4 +88,58 @@ router.post("/ai-proxy/chat", async (req, res) => {
   }
 });
 
+/** Audio transcription via OpenRouter Whisper (accepts base64 JSON, returns { text }) */
+router.post("/ai-proxy/transcribe", async (req, res) => {
+  const provider = String(req.query["provider"] || "");
+  const authHeader = req.headers["authorization"];
+  if (!authHeader) { res.status(401).json({ error: "Authorization header missing" }); return; }
+
+  if (provider !== "openrouter") {
+    res.status(400).json({ error: "Audio transcription is only supported with the OpenRouter provider." });
+    return;
+  }
+
+  const { audioBase64, model = "openai/whisper-large-v3" } = req.body as {
+    audioBase64?: string;
+    model?: string;
+  };
+  if (!audioBase64) { res.status(400).json({ error: "audioBase64 required" }); return; }
+
+  try {
+    // Strip the data-url prefix if present
+    const base64Data = audioBase64.includes(",") ? audioBase64.split(",")[1] : audioBase64;
+    const audioBuffer = Buffer.from(base64Data, "base64");
+
+    const formData = new FormData();
+    formData.append(
+      "file",
+      new Blob([audioBuffer], { type: "audio/webm" }),
+      "recording.webm"
+    );
+    formData.append("model", model);
+
+    const upstream = await fetchWithTimeout(
+      "https://openrouter.ai/api/v1/audio/transcriptions",
+      {
+        method: "POST",
+        headers: { Authorization: authHeader },
+        body: formData,
+      },
+      90_000
+    );
+
+    const text = await upstream.text();
+    let data: unknown;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    res.status(upstream.status).json(data);
+  } catch (err: any) {
+    req.log.error({ err }, "ai-proxy transcribe failed");
+    const isTimeout = err?.name === "AbortError";
+    res.status(502).json({
+      error: isTimeout ? "Transcription timed out (>90 s)" : "Upstream connection error",
+      detail: err?.message,
+    });
+  }
+});
+
 export default router;

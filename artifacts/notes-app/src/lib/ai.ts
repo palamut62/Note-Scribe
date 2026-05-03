@@ -302,6 +302,42 @@ export async function suggestTags(
   return raw.split(',').map((t: string) => t.trim().toLowerCase()).filter((t: string) => t.length > 0);
 }
 
+/**
+ * Transcribe an audio recording using OpenRouter's Whisper endpoint.
+ * audioDataUrl can be a data-url or raw base64 string.
+ */
+export async function transcribeAudio(
+  audioDataUrl: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+): Promise<string> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  if (provider !== 'openrouter') {
+    throw new Error('Ses transkripsiyonu yalnızca OpenRouter sağlayıcısı ile desteklenmektedir.');
+  }
+
+  const response = await fetch(`${PROXY_BASE}/transcribe?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ audioBase64: audioDataUrl, model: 'openai/whisper-large-v3' }),
+  });
+
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const j = await response.json();
+      detail = j.error?.message || j.error || j.message || detail;
+    } catch {}
+    throw new Error(`Transkripsiyon Hatası (${response.status}): ${detail}`);
+  }
+
+  const data = await response.json();
+  return (data.text || '').trim();
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;

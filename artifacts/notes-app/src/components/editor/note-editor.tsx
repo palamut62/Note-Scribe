@@ -688,7 +688,7 @@ export function NoteEditor({ note }: Props) {
         <span className="ml-auto opacity-40 text-[10px] tracking-wide">v2.0.0</span>
       </div>
 
-      <VoiceRecorderDialog note={note} open={showVoiceRecorder} onClose={() => setShowVoiceRecorder(false)} />
+      <VoiceRecorderDialog note={note} open={showVoiceRecorder} onClose={() => setShowVoiceRecorder(false)} editor={editor} />
       <VersionHistoryDialog note={note} open={showVersionHistory} onClose={() => setShowVersionHistory(false)} />
       <NoteEncryptDialog note={note} open={showEncrypt} onClose={() => setShowEncrypt(false)} />
       <MathInsertDialog open={showMath} onClose={() => setShowMath(false)} editor={editor} />
