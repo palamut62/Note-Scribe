@@ -86,10 +86,20 @@ router.post("/ai-proxy/chat", async (req, res) => {
     );
 
     const text = await upstream.text();
-    req.log.info({ status: upstream.status, bodyLen: text.length }, "ai-proxy chat response");
 
     let data: unknown;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+    // Log body excerpt on error for easier debugging
+    if (upstream.status >= 400) {
+      req.log.warn(
+        { status: upstream.status, provider, model: (req.body as any)?.model, body: text.slice(0, 500) },
+        "ai-proxy chat upstream error"
+      );
+    } else {
+      req.log.info({ status: upstream.status, bodyLen: text.length }, "ai-proxy chat response");
+    }
+
     res.status(upstream.status).json(data);
   } catch (err: any) {
     req.log.error({ err }, "ai-proxy chat fetch failed");

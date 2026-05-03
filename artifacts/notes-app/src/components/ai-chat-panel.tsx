@@ -63,10 +63,11 @@ export function AiChatPanel({ note, notes, onClose }: Props) {
     const text = input.trim();
     if (!text || loading) return;
 
-    const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
-    const model = settings.provider === 'openrouter' ? settings.openrouterModel : settings.nvidiaModel;
+    const provider = settings.provider;
+    const apiKey = provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
+    const model = (provider === 'openrouter' ? settings.openrouterModel : settings.nvidiaModel)?.trim();
 
-    if (!apiKey || !model) {
+    if (!apiKey?.trim() || !model) {
       toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
@@ -102,7 +103,15 @@ export function AiChatPanel({ note, notes, onClose }: Props) {
       );
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: unknown) {
-      toast({ title: t('ai.error'), description: (err as Error).message, variant: 'destructive' });
+      const msg = (err as Error).message ?? '';
+      const is400 = msg.includes('(400)');
+      toast({
+        title: t('ai.error'),
+        description: is400
+          ? `${msg} — Ayarlardan model adını kontrol edin.`
+          : msg,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }

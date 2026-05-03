@@ -341,7 +341,8 @@ export async function chatWithNote(
   customSystemPrompt?: string,
 ): Promise<string> {
   if (!apiKey) throw new Error('API anahtarı gerekli');
-  if (!model) throw new Error('Model seçimi gerekli');
+  const trimmedModel = model.trim();
+  if (!trimmedModel) throw new Error('Model seçimi gerekli');
 
   const defaultTemplate = lang === 'tr'
     ? DEFAULT_AI_PROMPTS.chat
@@ -352,11 +353,11 @@ export async function chatWithNote(
   const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey.trim()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model,
+      model: trimmedModel,
       messages: [
         { role: 'system', content: systemPrompt },
         ...messages,
@@ -366,7 +367,7 @@ export async function chatWithNote(
 
   if (!response.ok) {
     const detail = await extractApiError(response);
-    throw new Error(`API Hatası (${response.status}): ${detail}`);
+    throw new Error(`API Hatası (${response.status}): ${detail} [model: ${trimmedModel}]`);
   }
 
   const data = await response.json();
