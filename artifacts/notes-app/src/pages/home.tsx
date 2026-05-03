@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { PinnableActionId, AppView } from '@/lib/types';
@@ -47,17 +48,31 @@ export function Home() {
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const clipboardHistory = useClipboardHistory();
+  const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(() => {
-    try { return localStorage.getItem('notlar-sidebar-open') !== 'false'; } catch { return true; }
+    try {
+      if (window.innerWidth < 768) return false;
+      return localStorage.getItem('notlar-sidebar-open') !== 'false';
+    } catch { return true; }
   });
 
   const toggleSidebar = () => {
     setSidebarOpen(v => {
       const next = !v;
-      try { localStorage.setItem('notlar-sidebar-open', String(next)); } catch {}
+      if (!isMobile) {
+        try { localStorage.setItem('notlar-sidebar-open', String(next)); } catch {}
+      }
       return next;
     });
   };
+
+  const prevNoteIdRef = useRef(activeNoteId);
+  useEffect(() => {
+    if (isMobile && activeNoteId && activeNoteId !== prevNoteIdRef.current) {
+      setSidebarOpen(false);
+    }
+    prevNoteIdRef.current = activeNoteId;
+  }, [activeNoteId, isMobile]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -346,7 +361,17 @@ export function Home() {
 
       <div className="app-editor-area" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {currentView === 'editor' && sidebarOpen && (
-          <Sidebar />
+          <>
+            {isMobile && (
+              <div
+                className="mobile-sidebar-backdrop"
+                onClick={() => setSidebarOpen(false)}
+              />
+            )}
+            <div className={isMobile ? 'mobile-sidebar-panel' : ''}>
+              <Sidebar />
+            </div>
+          </>
         )}
 
         {currentView === 'editor' ? (

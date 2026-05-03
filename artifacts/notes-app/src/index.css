@@ -2755,4 +2755,133 @@ ul[data-type="taskList"] li > div {
 .toc-h2 { padding-left: 16px; color: hsl(var(--foreground) / 0.8); }
 .toc-h3 { padding-left: 28px; color: hsl(var(--muted-foreground)); font-size: 10.5px; }
 
+/* ─── Mobile (< 768px) ─────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+
+  /* ── Sidebar: overlay drawer ── */
+  .mobile-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: hsl(0 0% 0% / 0.45);
+    z-index: 49;
+    backdrop-filter: blur(1px);
+  }
+
+  .mobile-sidebar-panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 50;
+    box-shadow: 4px 0 24px hsl(0 0% 0% / 0.25);
+  }
+
+  .mobile-sidebar-panel > div {
+    height: 100dvh !important;
+  }
+
+  /* ── Menubar ── */
+  .app-menubar {
+    padding: 0 6px 0 8px;
+    height: 40px;
+  }
+
+  .app-title {
+    font-size: 14px;
+  }
+
+  /* ── Tab bar ── */
+  .tab-item {
+    min-width: 56px;
+    max-width: 130px;
+  }
+
+  .tab-close {
+    opacity: 1 !important;
+  }
+
+  /* ── Toolbar: horizontal scroll, no wrap ── */
+  .toolbar-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 6px;
+    gap: 2px;
+  }
+
+  .toolbar-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar-row-secondary {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toolbar-row-secondary::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Larger touch targets ── */
+  .tbtn {
+    height: 34px !important;
+    width: 34px !important;
+  }
+
+  .toolbar-color-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* ── Editor scroll: reduce padding ── */
+  .editor-scroll {
+    padding: 12px 8px 48px 8px;
+  }
+
+  /* ── Editor page: full width, no fixed page shadow ── */
+  .editor-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    background-image: none !important;
+  }
+
+  /* ── Status bar: hide to save space ── */
+  .editor-statusbar {
+    display: none;
+  }
+
+  /* ── Global tag bar: scroll horizontally ── */
+  .global-tag-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 3px 8px;
+  }
+
+  .global-tag-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* ── Note items: show context menu on tap ── */
+  .group .opacity-0 {
+    opacity: 1 !important;
+  }
+
+  /* ── Spacing & callout dropdowns ── */
+  .color-swatch-popup {
+    grid-template-columns: repeat(4, 24px);
+  }
+
+  /* ── AI chat panel: full width on mobile ── */
+  .ai-chat-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
 /* ─── Print / PDF ──────────────────────────────────────────────────────────── */
