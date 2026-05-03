@@ -409,6 +409,92 @@ export function SettingsDialog() {
               </div>
             </div>
 
+            {/* Page color */}
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.page.color')}</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5 flex-wrap">
+                  {['#ffffff','#fffef0','#fdf6e3','#f0f4ff','#f0fff4','#fff0f0','#f5f0ff','#1e1e1e','#1a2332','#0d1f0d'].map(col => (
+                    <button
+                      key={col}
+                      onClick={() => updateSettings({ pageColor: col })}
+                      title={col}
+                      className={`w-6 h-6 rounded border-2 transition-all ${
+                        (settings.pageColor ?? '') === col ? 'border-primary scale-110' : 'border-border hover:scale-105'
+                      }`}
+                      style={{ background: col }}
+                    />
+                  ))}
+                </div>
+                <input
+                  type="color"
+                  value={settings.pageColor ?? '#ffffff'}
+                  onChange={e => updateSettings({ pageColor: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent"
+                  title="Özel renk"
+                />
+                {settings.pageColor && (
+                  <button
+                    onClick={() => updateSettings({ pageColor: undefined })}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                  >
+                    {t('settings.page.color.reset')}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Column layout */}
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.page.columns')}</h3>
+              <div className="flex gap-2">
+                {([1, 2, 3] as const).map(n => (
+                  <button
+                    key={n}
+                    onClick={() => updateSettings({ pageColumns: n })}
+                    className={`flex-1 py-2 flex flex-col items-center gap-1.5 rounded border text-xs transition-colors ${
+                      (settings.pageColumns ?? 1) === n
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <div className={`flex gap-0.5 ${(settings.pageColumns ?? 1) === n ? 'opacity-100' : 'opacity-60'}`}>
+                      {Array.from({ length: n }).map((_, i) => (
+                        <div key={i} className="w-3 h-5 rounded-sm bg-current opacity-70" />
+                      ))}
+                    </div>
+                    {t(`settings.page.col${n}` as Parameters<typeof t>[0])}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Line spacing */}
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.page.lineheight')}</h3>
+              <div className="flex gap-2">
+                {([
+                  { val: 1.2, label: '1.2' },
+                  { val: 1.5, label: '1.5' },
+                  { val: 1.75, label: '1.75' },
+                  { val: 2.0, label: '2.0' },
+                  { val: 2.5, label: '2.5' },
+                ]).map(({ val, label }) => (
+                  <button
+                    key={val}
+                    onClick={() => updateSettings({ lineHeight: val })}
+                    className={`flex-1 py-1.5 text-xs rounded border transition-colors ${
+                      (settings.lineHeight ?? 1.75) === val
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3">
               <h3 className="font-medium text-sm border-b pb-2">{t('settings.bg.pattern')}</h3>
               <RadioGroup

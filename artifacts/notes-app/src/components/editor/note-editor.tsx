@@ -562,6 +562,7 @@ export function NoteEditor({ note }: Props) {
               ['--page-w' as string]: `${pageW}px`,
               ['--page-h' as string]: `${pageH}px`,
               minHeight: pageMinH,
+              ...(settings.pageColor ? { background: settings.pageColor } : {}),
             }}
           >
             <DrawingCanvas
@@ -637,6 +638,9 @@ export function NoteEditor({ note }: Props) {
                 paddingLeft: settings.marginLeft ?? 80,
                 paddingRight: settings.marginRight ?? 80,
                 pointerEvents: drawMode ? 'none' : undefined,
+                columnCount: (settings.pageColumns ?? 1) > 1 ? (settings.pageColumns ?? 1) : undefined,
+                columnGap: (settings.pageColumns ?? 1) > 1 ? 32 : undefined,
+                lineHeight: settings.lineHeight ?? 1.75,
               }}
             >
               <EditorContent editor={editor} />

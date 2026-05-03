@@ -151,6 +151,9 @@ export interface Settings {
   pinnedActions: PinnableActionId[];
   pageSize?: PageSize;
   pageOrientation?: PageOrientation;
+  pageColor?: string;
+  pageColumns?: 1 | 2 | 3;
+  lineHeight?: number;
   sortBy?: SortBy;
   sortDir?: SortDir;
   currentView?: AppView;

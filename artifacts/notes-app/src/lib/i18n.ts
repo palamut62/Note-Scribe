@@ -63,6 +63,15 @@ const DICT = {
     'draw.eraser': 'Silgi',
     'draw.savepng': 'PNG kaydet',
     'draw.move': 'Taşı',
+    // page color / columns / line-height
+    'settings.page.color': 'Sayfa Arka Plan Rengi',
+    'settings.page.color.default': 'Varsayılan',
+    'settings.page.color.reset': 'Sıfırla',
+    'settings.page.columns': 'Sütun Düzeni',
+    'settings.page.col1': 'Tek Sütun',
+    'settings.page.col2': 'İki Sütun',
+    'settings.page.col3': 'Üç Sütun',
+    'settings.page.lineheight': 'Satır Aralığı',
     // page size / orientation
     'settings.page.size': 'Sayfa Boyutu',
     'settings.page.orientation': 'Yönlendirme',
@@ -383,6 +392,15 @@ const DICT = {
     'settings.bg.none': 'None',
     'settings.bg.lines': 'Lined',
     'settings.bg.grid': 'Grid',
+    // page color / columns / line-height
+    'settings.page.color': 'Page Background Color',
+    'settings.page.color.default': 'Default',
+    'settings.page.color.reset': 'Reset',
+    'settings.page.columns': 'Column Layout',
+    'settings.page.col1': 'Single Column',
+    'settings.page.col2': 'Two Columns',
+    'settings.page.col3': 'Three Columns',
+    'settings.page.lineheight': 'Line Spacing',
     // page size / orientation
     'settings.page.size': 'Page Size',
     'settings.page.orientation': 'Orientation',
