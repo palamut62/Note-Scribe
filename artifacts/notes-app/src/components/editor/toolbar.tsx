@@ -9,7 +9,7 @@ import {
   Mic, History, Lock, Unlock, Bot, FileText, Sigma, Link2,
   Subscript as SubscriptIcon, Superscript as SuperscriptIcon,
   IndentIncrease, IndentDecrease, RemoveFormatting, AlignVerticalSpaceAround,
-  Info, BookOpen, Paintbrush,
+  Info, BookOpen, Paintbrush, Undo2, Redo2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -501,6 +501,27 @@ export function EditorToolbar({
     <div className="toolbar-root">
       {/* Row 1 */}
       <div className="toolbar-row">
+        <Button
+          variant="ghost" size="icon"
+          className="tbtn"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          title={t('toolbar.undo') + ' (Ctrl+Z)'}
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost" size="icon"
+          className="tbtn"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          title={t('toolbar.redo') + ' (Ctrl+Y)'}
+        >
+          <Redo2 className="h-3.5 w-3.5" />
+        </Button>
+
+        <Divider />
+
         <Select
           value={
             editor.isActive('heading', { level: 1 }) ? 'h1' :
