@@ -440,7 +440,7 @@ export function Sidebar() {
                           }}
                           onDragEnd={() => { setDraggingNoteId(null); setDragOverId(null); }}
                           onClick={e => { e.stopPropagation(); setActiveNoteId(note.id); setActiveFolderId(folder.id); }}
-                          className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer text-xs transition-colors ${
+                          className={`group flex items-center gap-1 px-2 py-1.5 rounded-md cursor-pointer text-xs transition-colors ${
                             draggingNoteId === note.id
                               ? 'opacity-40'
                               : activeNoteId === note.id
@@ -449,19 +449,19 @@ export function Sidebar() {
                           }`}
                           style={note.color ? { borderLeft: `2px solid ${note.color}`, paddingLeft: '6px' } : undefined}
                         >
-                          <span className="flex-1 truncate font-medium">{note.title || t('note.untitled')}</span>
+                          <span className="flex-1 truncate font-medium min-w-0">{note.title || t('note.untitled')}</span>
                           {note.isPinned && <Pin className="h-2.5 w-2.5 text-primary opacity-60 shrink-0" />}
                           {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/40 hover:text-sidebar-foreground shrink-0"
+                                className="p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/30 hover:text-sidebar-foreground shrink-0"
                                 onClick={e => e.stopPropagation()}
                               >
                                 <MoreHorizontal className="h-3 w-3" />
                               </button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuContent align="end" className="w-48" style={{ zIndex: 9999 }}>
                               <DropdownMenuItem onClick={e => { e.stopPropagation(); togglePinNote(note.id); }}>
                                 {note.isPinned ? <><PinOff className="h-3.5 w-3.5 mr-2" />{t('note.unpin')}</> : <><Pin className="h-3.5 w-3.5 mr-2" />{t('note.pin')}</>}
                               </DropdownMenuItem>
@@ -470,7 +470,7 @@ export function Sidebar() {
                                   <DropdownMenuSubTrigger>
                                     <MoveRight className="h-3.5 w-3.5 mr-2" />{t('folder.move')}
                                   </DropdownMenuSubTrigger>
-                                  <DropdownMenuSubContent>
+                                  <DropdownMenuSubContent style={{ zIndex: 9999 }}>
                                     <DropdownMenuItem onClick={() => moveNoteToFolder(note.id, undefined)}>
                                       {t('folder.unfiled')}
                                     </DropdownMenuItem>
