@@ -130,10 +130,19 @@ export function Home() {
     if (!file) return;
     e.target.value = '';
 
+    const shortenTitle = (raw: string) => {
+      const trimmed = raw.trim().replace(/[_\-]+/g, ' ');
+      const words = trimmed.split(/\s+/).filter(Boolean).slice(0, 2);
+      let out = words.join(' ');
+      const MAX = 24;
+      if (out.length > MAX) out = out.slice(0, MAX).trimEnd() + '…';
+      return out || 'Not';
+    };
+
     if (file.name.toLowerCase().endsWith('.docx')) {
       const arrayBuffer = await file.arrayBuffer();
       const result = await mammoth.convertToHtml({ arrayBuffer });
-      const title = file.name.replace(/\.docx$/i, '');
+      const title = shortenTitle(file.name.replace(/\.docx$/i, ''));
       createNote({ title, content: result.value, folderId: activeFolderId && activeFolderId !== 'unfiled' ? activeFolderId : undefined });
       return;
     }
@@ -141,7 +150,7 @@ export function Home() {
     const reader = new FileReader();
     reader.onload = () => {
       const raw = reader.result as string;
-      const title = file.name.replace(/\.(txt|md)$/i, '');
+      const title = shortenTitle(file.name.replace(/\.(txt|md)$/i, ''));
       const content = raw
         .split('\n')
         .map(line => `<p>${line || '<br>'}</p>`)

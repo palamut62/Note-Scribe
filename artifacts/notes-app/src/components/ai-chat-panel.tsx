@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { Note } from '@/lib/types';
-import { ChatMessage, chatWithNote, DEFAULT_AI_PROMPTS } from '@/lib/ai';
+import { ChatMessage, chatWithNoteStream, DEFAULT_AI_PROMPTS } from '@/lib/ai';
 import { Bot, Send, Trash2, X, User, BookOpen, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -92,16 +92,28 @@ export function AiChatPanel({ note, notes, onClose }: Props) {
         customSystemPrompt = settings.aiPrompts?.chat;
       }
 
-      const reply = await chatWithNote(
+      // Append empty assistant message that will be filled progressively
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+      await chatWithNoteStream(
         newMessages,
         noteContent,
         settings.provider,
         apiKey,
         model,
+        (_delta, full) => {
+          setMessages(prev => {
+            const next = prev.slice();
+            const last = next[next.length - 1];
+            if (last && last.role === 'assistant') {
+              next[next.length - 1] = { ...last, content: full };
+            }
+            return next;
+          });
+        },
         settings.language ?? 'tr',
         customSystemPrompt,
       );
-      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: unknown) {
       const msg = (err as Error).message ?? '';
       const is400 = msg.includes('(400)');

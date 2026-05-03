@@ -331,6 +331,92 @@ export interface ChatMessage {
   content: string;
 }
 
+export async function chatWithNoteStream(
+  messages: ChatMessage[],
+  noteContent: string,
+  provider: 'openrouter' | 'nvidia',
+  apiKey: string,
+  model: string,
+  onChunk: (deltaText: string, fullText: string) => void,
+  lang: 'tr' | 'en' = 'tr',
+  customSystemPrompt?: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (!apiKey) throw new Error('API anahtarı gerekli');
+  const trimmedModel = model.trim();
+  if (!trimmedModel) throw new Error('Model seçimi gerekli');
+
+  const defaultTemplate = lang === 'tr'
+    ? DEFAULT_AI_PROMPTS.chat
+    : 'You are a note assistant. The user\'s note is:\n\n{noteContent}\n\nAnswer questions based on this note.';
+  const template = customSystemPrompt || defaultTemplate;
+  const systemPrompt = template.replace('{noteContent}', noteContent);
+
+  const response = await fetch(`${PROXY_BASE}/chat?provider=${provider}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey.trim()}`,
+      'Content-Type': 'application/json',
+    },
+    signal,
+    body: JSON.stringify({
+      model: trimmedModel,
+      stream: true,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await extractApiError(response);
+    throw new Error(`API Hatası (${response.status}): ${detail} [model: ${trimmedModel}]`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    // No stream body — fall back to JSON read
+    const data = await response.json().catch(() => ({}));
+    const full = data.choices?.[0]?.message?.content || '';
+    if (full) onChunk(full, full);
+    return full;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let full = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE: split by lines, emit on blank-line boundaries
+    let idx: number;
+    while ((idx = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, idx).trimEnd();
+      buffer = buffer.slice(idx + 1);
+      if (!line || !line.startsWith('data:')) continue;
+      const payload = line.slice(5).trim();
+      if (payload === '[DONE]') return full;
+      try {
+        const j = JSON.parse(payload);
+        const delta = j?.choices?.[0]?.delta?.content
+          ?? j?.choices?.[0]?.message?.content
+          ?? '';
+        if (delta) {
+          full += delta;
+          onChunk(delta, full);
+        }
+      } catch {
+        // ignore non-JSON keepalive comments etc.
+      }
+    }
+  }
+  return full;
+}
+
 export async function chatWithNote(
   messages: ChatMessage[],
   noteContent: string,

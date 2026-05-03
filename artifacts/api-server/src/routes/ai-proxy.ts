@@ -61,8 +61,8 @@ router.post("/ai-proxy/chat", async (req, res) => {
   if (!authHeader) { res.status(401).json({ error: "Authorization header missing" }); return; }
 
   try {
-    // Force stream:false — we read the whole response with .text() so streaming SSE would break parsing.
-    const forwardBody = { ...req.body, stream: false };
+    const wantsStream = (req.body as any)?.stream === true;
+    const forwardBody = wantsStream ? { ...req.body, stream: true } : { ...req.body, stream: false };
 
     // OpenRouter recommends these headers for better routing and analytics.
     const extraHeaders: Record<string, string> =
@@ -84,6 +84,27 @@ router.post("/ai-proxy/chat", async (req, res) => {
       },
       120_000
     );
+
+    if (wantsStream && upstream.ok && upstream.body) {
+      res.status(upstream.status);
+      res.setHeader("Content-Type", upstream.headers.get("content-type") ?? "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      const reader = (upstream.body as any).getReader();
+      const decoder = new TextDecoder();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          res.write(decoder.decode(value, { stream: true }));
+        }
+      } catch (streamErr) {
+        req.log.error({ err: streamErr }, "ai-proxy chat stream broken");
+      }
+      res.end();
+      return;
+    }
 
     const text = await upstream.text();
 
@@ -129,24 +150,33 @@ router.post("/ai-proxy/transcribe", async (req, res) => {
   if (!audioBase64) { res.status(400).json({ error: "audioBase64 required" }); return; }
 
   try {
-    // Strip the data-url prefix if present
-    const base64Data = audioBase64.includes(",") ? audioBase64.split(",")[1] : audioBase64;
-    const audioBuffer = Buffer.from(base64Data, "base64");
+    // Strip the data-url prefix if present and detect format from it
+    let base64Data = audioBase64;
+    let format = "webm";
+    if (audioBase64.includes(",")) {
+      const [prefix, data] = audioBase64.split(",", 2);
+      base64Data = data;
+      const m = /data:audio\/([a-z0-9]+)/i.exec(prefix);
+      if (m && m[1]) format = m[1].toLowerCase();
+    }
 
-    const formData = new FormData();
-    formData.append(
-      "file",
-      new Blob([audioBuffer], { type: "audio/webm" }),
-      "recording.webm"
-    );
-    formData.append("model", model);
-
+    // OpenRouter's transcription endpoint expects JSON with input_audio,
+    // not multipart form-data. Sending multipart causes a JSON parse error
+    // upstream ("No number after minus sign" — the -- boundary line).
     const upstream = await fetchWithTimeout(
       "https://openrouter.ai/api/v1/audio/transcriptions",
       {
         method: "POST",
-        headers: { Authorization: authHeader },
-        body: formData,
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://nootle.io",
+          "X-Title": "Nootle",
+        },
+        body: JSON.stringify({
+          model,
+          input_audio: { data: base64Data, format },
+        }),
       },
       90_000
     );
@@ -154,6 +184,9 @@ router.post("/ai-proxy/transcribe", async (req, res) => {
     const text = await upstream.text();
     let data: unknown;
     try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    if (upstream.status >= 400) {
+      req.log.warn({ status: upstream.status, body: text.slice(0, 500) }, "ai-proxy transcribe upstream error");
+    }
     res.status(upstream.status).json(data);
   } catch (err: any) {
     req.log.error({ err }, "ai-proxy transcribe failed");
