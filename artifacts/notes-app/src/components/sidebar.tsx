@@ -455,7 +455,7 @@ export function Sidebar() {
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <button
-                                className="p-0.5 rounded hover:bg-sidebar-border text-sidebar-foreground/70 hover:text-sidebar-foreground shrink-0"
+                                className="p-1 rounded-md text-sidebar-foreground hover:bg-sidebar-border shrink-0"
                                 onClick={e => e.stopPropagation()}
                               >
                                 <MoreHorizontal className="h-3 w-3" />
@@ -600,21 +600,21 @@ export function Sidebar() {
                   </div>
 
                   {!selectMode && (
-                    <div className="flex items-center gap-0 shrink-0">
+                    <div className="flex items-center gap-0.5 shrink-0 ml-1 self-start">
                       <button
-                        className="p-1 rounded-sm text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        className="p-1.5 rounded-md text-destructive hover:bg-destructive/15 transition-colors"
                         title={t('note.delete')}
                         onClick={e => { e.stopPropagation(); deleteNote(note.id); }}
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
-                            className="p-1 rounded-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                            className="p-1.5 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
                             onClick={e => e.stopPropagation()}
                           >
-                            <MoreHorizontal className="h-3 w-3" />
+                            <MoreHorizontal className="h-3.5 w-3.5" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-52" style={{ zIndex: 9999 }}>
