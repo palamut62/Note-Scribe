@@ -240,6 +240,8 @@ export function NoteEditor({ note }: Props) {
   const [drawColor, setDrawColor] = useState('#e11d48');
   const [drawWidth, setDrawWidth] = useState(3);
   const drawCanvasRef = useRef<DrawingCanvasHandle>(null);
+  const [selectedDrawId, setSelectedDrawId] = useState<string | null>(null);
+  const [selectedDrawBounds, setSelectedDrawBounds] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
   const pageDims = resolvePageDims(settings.pageSize, settings.pageOrientation);
@@ -499,12 +501,14 @@ export function NoteEditor({ note }: Props) {
           color={drawColor}
           strokeWidth={drawWidth}
           language={settings.language ?? 'tr'}
-          onToolChange={setDrawTool}
+          hasSelection={!!selectedDrawId}
+          onToolChange={t => { setDrawTool(t); if (t !== 'move') { setSelectedDrawId(null); setSelectedDrawBounds(null); } }}
           onColorChange={setDrawColor}
           onWidthChange={setDrawWidth}
           onUndo={() => drawCanvasRef.current?.undo()}
-          onClear={() => drawCanvasRef.current?.clear()}
-          onExit={() => setDrawMode(false)}
+          onClear={() => { drawCanvasRef.current?.clear(); setSelectedDrawId(null); setSelectedDrawBounds(null); }}
+          onDeleteSelected={() => { drawCanvasRef.current?.deleteSelected(); setSelectedDrawId(null); setSelectedDrawBounds(null); }}
+          onExit={() => { setDrawMode(false); setSelectedDrawId(null); setSelectedDrawBounds(null); }}
           onSavePng={async () => {
             const page = pageRef.current;
             if (!page) return;
@@ -573,7 +577,46 @@ export function NoteEditor({ note }: Props) {
               color={drawColor}
               strokeWidth={drawWidth}
               active={drawMode}
+              onSelectionChange={(id, bounds) => {
+                setSelectedDrawId(id);
+                setSelectedDrawBounds(bounds);
+              }}
             />
+            {drawMode && selectedDrawId && selectedDrawBounds && (
+              <button
+                title="Sil"
+                style={{
+                  position: 'absolute',
+                  left: selectedDrawBounds.x + selectedDrawBounds.w,
+                  top: selectedDrawBounds.y,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 55,
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: '2px solid #fff',
+                  boxShadow: '0 1px 6px rgba(0,0,0,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0,
+                  fontSize: 12,
+                  lineHeight: 1,
+                }}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => {
+                  e.stopPropagation();
+                  drawCanvasRef.current?.deleteSelected();
+                  setSelectedDrawId(null);
+                  setSelectedDrawBounds(null);
+                }}
+              >
+                ×
+              </button>
+            )}
             <PageOverlays
               pageRef={pageRef}
               header={safeHeader}

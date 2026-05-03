@@ -8,11 +8,13 @@ interface Props {
   color: string;
   strokeWidth: number;
   language: Language;
+  hasSelection: boolean;
   onToolChange: (t: DrawTool) => void;
   onColorChange: (c: string) => void;
   onWidthChange: (w: number) => void;
   onUndo: () => void;
   onClear: () => void;
+  onDeleteSelected: () => void;
   onExit: () => void;
   onSavePng: () => void;
 }
@@ -24,9 +26,9 @@ const DRAW_COLORS = [
 ];
 
 export function DrawingToolbar({
-  tool, color, strokeWidth, language,
+  tool, color, strokeWidth, language, hasSelection,
   onToolChange, onColorChange, onWidthChange,
-  onUndo, onClear, onExit, onSavePng,
+  onUndo, onClear, onDeleteSelected, onExit, onSavePng,
 }: Props) {
   const t = makeT(language);
 
@@ -164,6 +166,12 @@ export function DrawingToolbar({
           <Undo2 size={12} />
           {t('draw.undo')}
         </button>
+        {hasSelection && (
+          <button className="drawing-action-btn drawing-action-danger" onClick={onDeleteSelected}>
+            <Trash2 size={12} />
+            {t('draw.delete')}
+          </button>
+        )}
         <button className="drawing-action-btn" onClick={onSavePng}>
           <ImageDown size={12} />
           {t('draw.savepng')}

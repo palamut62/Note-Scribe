@@ -63,6 +63,7 @@ const DICT = {
     'draw.eraser': 'Silgi',
     'draw.savepng': 'PNG kaydet',
     'draw.move': 'Taşı',
+    'draw.delete': 'Seçili öğeyi sil',
     // page color / columns / line-height
     'settings.page.color': 'Sayfa Arka Plan Rengi',
     'settings.page.color.default': 'Varsayılan',
@@ -393,6 +394,7 @@ const DICT = {
     'draw.eraser': 'Eraser',
     'draw.savepng': 'Save PNG',
     'draw.move': 'Move',
+    'draw.delete': 'Delete selected',
     'settings.title': 'Settings',
     'settings.language': 'Interface Language',
     'settings.tab.ai': 'AI',

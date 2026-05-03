@@ -4,9 +4,12 @@ import type { DrawOp, DrawTool } from '@/lib/types';
 export interface DrawingCanvasHandle {
   undo: () => void;
   clear: () => void;
+  deleteSelected: () => void;
   getCanvas: () => HTMLCanvasElement | null;
   renderOpsToCanvas: (target: HTMLCanvasElement) => void;
 }
+
+interface SelectionBounds { x: number; y: number; w: number; h: number }
 
 interface Props {
   ops: DrawOp[];
@@ -15,6 +18,7 @@ interface Props {
   color: string;
   strokeWidth: number;
   active: boolean;
+  onSelectionChange?: (id: string | null, bounds: SelectionBounds | null) => void;
 }
 
 /* ─── Geometry helpers ─────────────────────────────────────────────────── */
@@ -116,7 +120,7 @@ function drawSelectionBox(ctx: CanvasRenderingContext2D, op: DrawOp) {
 /* ─── Component ────────────────────────────────────────────────────────── */
 
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
-  function DrawingCanvas({ ops, onOpsChange, tool, color, strokeWidth, active }, ref) {
+  function DrawingCanvas({ ops, onOpsChange, tool, color, strokeWidth, active, onSelectionChange }, ref) {
     const canvasRef     = useRef<HTMLCanvasElement>(null);
     const isDrawing     = useRef(false);
     const currentOp     = useRef<DrawOp | null>(null);
@@ -128,17 +132,42 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
     const movingOpRef   = useRef<DrawOp | null>(null);   // live preview during drag
     const dragOriginRef = useRef<{ x: number; y: number } | null>(null);
     const [, forceRender] = useState(0); // trigger cursor recalc on hover
+    const onSelectionChangeRef = useRef(onSelectionChange);
+    onSelectionChangeRef.current = onSelectionChange;
+
+    const notifySelection = useCallback((id: string | null) => {
+      if (!onSelectionChangeRef.current) return;
+      if (id === null) { onSelectionChangeRef.current(null, null); return; }
+      const op = opsRef.current.find(o => o.id === id);
+      if (!op) { onSelectionChangeRef.current(null, null); return; }
+      const PAD = 6;
+      const b = getBounds(op);
+      onSelectionChangeRef.current(id, { x: b.x - PAD, y: b.y - PAD, w: b.w + PAD * 2, h: b.h + PAD * 2 });
+    }, []);
 
     useImperativeHandle(ref, () => ({
-      undo:  () => { if (opsRef.current.length > 0) onOpsChange(opsRef.current.slice(0, -1)); },
-      clear: () => { selectedIdRef.current = null; movingOpRef.current = null; onOpsChange([]); },
+      undo: () => { if (opsRef.current.length > 0) onOpsChange(opsRef.current.slice(0, -1)); },
+      clear: () => {
+        selectedIdRef.current = null;
+        movingOpRef.current = null;
+        notifySelection(null);
+        onOpsChange([]);
+      },
+      deleteSelected: () => {
+        const id = selectedIdRef.current;
+        if (!id) return;
+        onOpsChange(opsRef.current.filter(o => o.id !== id));
+        selectedIdRef.current = null;
+        movingOpRef.current = null;
+        notifySelection(null);
+      },
       getCanvas: () => canvasRef.current,
       renderOpsToCanvas: (target: HTMLCanvasElement) => {
         const ctx = target.getContext('2d');
         if (!ctx) return;
         for (const op of opsRef.current) renderOp(ctx, op);
       },
-    }));
+    }), [notifySelection, onOpsChange]);
 
     const redraw = useCallback(() => {
       const canvas = canvasRef.current;
@@ -192,9 +221,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
         selectedIdRef.current = null;
         movingOpRef.current   = null;
         dragOriginRef.current = null;
+        notifySelection(null);
         redraw();
       }
-    }, [tool, redraw]);
+    }, [tool, redraw, notifySelection]);
 
     useEffect(() => {
       if (!active) return;
@@ -209,12 +239,13 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
           onOpsChange(opsRef.current.filter(o => o.id !== selectedIdRef.current));
           selectedIdRef.current = null;
           movingOpRef.current   = null;
+          notifySelection(null);
           redraw();
         }
       };
       window.addEventListener('keydown', onKeyDown);
       return () => window.removeEventListener('keydown', onKeyDown);
-    }, [active, onOpsChange, tool, redraw]);
+    }, [active, onOpsChange, tool, redraw, notifySelection]);
 
     const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
       const rect = canvasRef.current!.getBoundingClientRect();
@@ -239,10 +270,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
           selectedIdRef.current = hit.id;
           movingOpRef.current   = { ...hit } as DrawOp;
           dragOriginRef.current = { x, y };
+          notifySelection(hit.id);
         } else {
           selectedIdRef.current = null;
           movingOpRef.current   = null;
           dragOriginRef.current = null;
+          notifySelection(null);
         }
         isDrawing.current = !!hit;
         redraw();
@@ -303,6 +336,10 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, Props>(
           const newOps  = opsRef.current.map(o => o.id === movedOp.id ? movedOp : o);
           movingOpRef.current = null;
           onOpsChange(newOps);
+          // Update bounds after move (use updated ops)
+          const PAD = 6;
+          const b = getBounds(movedOp);
+          onSelectionChangeRef.current?.(movedOp.id, { x: b.x - PAD, y: b.y - PAD, w: b.w + PAD * 2, h: b.h + PAD * 2 });
         }
         isDrawing.current = false;
         return;
