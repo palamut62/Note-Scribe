@@ -440,9 +440,9 @@ export function NoteEditor({ note }: Props) {
       <div className="editor-shell">
         <div className="flex flex-col items-center justify-center flex-1 gap-4 text-muted-foreground">
           <Lock className="h-12 w-12 opacity-30" />
-          <div className="text-sm font-medium">Bu not kilitli.</div>
+          <div className="text-sm font-medium">{t('encrypt.locked')}</div>
           <Button variant="outline" size="sm" onClick={() => setShowEncrypt(true)}>
-            Kilidi Aç
+            {t('encrypt.unlock')}
           </Button>
         </div>
         <NoteEncryptDialog note={note} open={showEncrypt} onClose={() => setShowEncrypt(false)} />

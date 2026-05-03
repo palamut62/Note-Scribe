@@ -147,7 +147,8 @@ export function EditorToolbar({
   const safeFooter: HeaderFooter = migrateHF(note.footer, '{sayfa}');
 
   const handleInsertDate = () => {
-    const today = new Date().toLocaleDateString('tr-TR', {
+    const locale = settings.language === 'tr' ? 'tr-TR' : 'en-US';
+    const today = new Date().toLocaleDateString(locale, {
       day: '2-digit', month: '2-digit', year: 'numeric',
     });
     editor.chain().focus().insertContent(today).run();
@@ -190,7 +191,7 @@ export function EditorToolbar({
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
+      toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
 
@@ -235,9 +236,9 @@ export function EditorToolbar({
         tr.replaceWith(from, to, textNode);
       }
       editor.view.dispatch(tr);
-      toast({ title: 'Fixed', description: 'AI successfully fixed the text.' });
+      toast({ title: t('ai.fix.success'), description: t('ai.fix.success.desc') });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Could not fix text', variant: 'destructive' });
+      toast({ title: t('ai.error'), description: err.message || t('ai.fix.success.desc'), variant: 'destructive' });
     } finally {
       setIsFixing(false);
     }
@@ -247,7 +248,7 @@ export function EditorToolbar({
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
+      toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
     const selection = editor.state.selection;
@@ -265,9 +266,9 @@ export function EditorToolbar({
       } else {
         editor.commands.setContent(translated);
       }
-      toast({ title: 'Çevrildi', description: `Metin ${target} diline çevrildi.` });
+      toast({ title: t('ai.translate.success'), description: t('ai.translate.success.desc', { target }) });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message || 'Could not translate', variant: 'destructive' });
+      toast({ title: t('ai.error'), description: err.message, variant: 'destructive' });
     } finally {
       setIsTranslating(false);
     }
@@ -277,7 +278,7 @@ export function EditorToolbar({
     const apiKey = settings.provider === 'openrouter' ? settings.openrouterApiKey : settings.nvidiaApiKey;
     const model  = settings.provider === 'openrouter' ? settings.openrouterModel  : settings.nvidiaModel;
     if (!apiKey || !model) {
-      toast({ title: 'AI Not Configured', description: 'Add an API key and select a model in Settings.', variant: 'destructive' });
+      toast({ title: t('ai.not.configured'), description: t('ai.not.configured.desc'), variant: 'destructive' });
       return;
     }
     const text = editor.getText();
@@ -285,19 +286,19 @@ export function EditorToolbar({
     setIsSummarizing(true);
     try {
       const summary = await summarizeText(text, settings.provider, apiKey, model, settings.language ?? 'tr', settings.aiPrompts?.summarize);
-      const label = settings.language === 'tr' ? 'AI Özeti' : 'AI Summary';
+      const label = t('ai.summary.title');
       const html = `<h3>${label}</h3><p>${summary.replace(/\n/g, '</p><p>')}</p><hr>`;
       editor.chain().focus().insertContentAt(editor.state.doc.content.size, html).run();
-      toast({ title: 'Özetlendi', description: 'AI özeti notun altına eklendi.' });
+      toast({ title: t('ai.summarize.success'), description: t('ai.summarize.success.desc') });
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: t('ai.error'), description: err.message, variant: 'destructive' });
     } finally {
       setIsSummarizing(false);
     }
   };
 
   const handleInsertWikiLink = () => {
-    const title = window.prompt('Bağlantı verilecek not başlığını girin:');
+    const title = window.prompt(t('toolbar.wiki.prompt'));
     if (title?.trim()) {
       editor.chain().focus().insertContent(`[[${title.trim()}]]`).run();
     }
@@ -392,7 +393,7 @@ export function EditorToolbar({
   };
 
   const handleInsertLink = () => {
-    const url = window.prompt('Enter URL:', 'https://');
+    const url = window.prompt(t('toolbar.link.prompt'), 'https://');
     if (url) editor.chain().focus().setLink({ href: url }).run();
   };
 
@@ -634,7 +635,7 @@ export function EditorToolbar({
         <div ref={calloutRef} className="relative">
           <button
             className="case-dropdown-trigger"
-            title="Bilgi Kutusu Ekle"
+            title={t('toolbar.callout.add')}
             onClick={() => setCalloutOpen(v => !v)}
           >
             <Info size={11} />
@@ -643,11 +644,11 @@ export function EditorToolbar({
           {calloutOpen && (
             <div className="case-dropdown-menu" style={{ minWidth: 130 }} onMouseLeave={() => setCalloutOpen(false)}>
               {([
-                { type: 'info',    label: 'Bilgi',    color: '#3b82f6', emoji: 'ℹ️' },
-                { type: 'warning', label: 'Uyarı',    color: '#f59e0b', emoji: '⚠️' },
-                { type: 'success', label: 'Başarı',   color: '#22c55e', emoji: '✅' },
-                { type: 'danger',  label: 'Tehlike',  color: '#ef4444', emoji: '🚫' },
-              ] as const).map(({ type, label, color, emoji }) => (
+                { type: 'info'    as const, labelKey: 'toolbar.callout.info'    as const, color: '#3b82f6', emoji: 'ℹ️' },
+                { type: 'warning' as const, labelKey: 'toolbar.callout.warning' as const, color: '#f59e0b', emoji: '⚠️' },
+                { type: 'success' as const, labelKey: 'toolbar.callout.success' as const, color: '#22c55e', emoji: '✅' },
+                { type: 'danger'  as const, labelKey: 'toolbar.callout.danger'  as const, color: '#ef4444', emoji: '🚫' },
+              ]).map(({ type, labelKey, color, emoji }) => (
                 <button
                   key={type}
                   className="case-menu-item"
@@ -658,7 +659,7 @@ export function EditorToolbar({
                   }}
                 >
                   <span style={{ fontSize: 13 }}>{emoji}</span>
-                  <span className="case-desc" style={{ color }}>{label}</span>
+                  <span className="case-desc" style={{ color }}>{t(labelKey)}</span>
                 </button>
               ))}
             </div>
@@ -670,7 +671,7 @@ export function EditorToolbar({
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertLink} title="Add link">
           <LinkIcon className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertWikiLink} title="Not bağlantısı ekle [[Not Adı]]">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertWikiLink} title={t('wiki.link.insert')}>
           <Link2 className="h-3.5 w-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="tbtn" onClick={() => imageInputRef.current?.click()} title="Add image">
@@ -700,7 +701,7 @@ export function EditorToolbar({
         <Button variant="ghost" size="icon" className="tbtn" onClick={handleInsertDate} title="Insert date">
           <CalendarDays className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="icon" className="tbtn" onClick={onOpenMath} title="Formül ekle (LaTeX)">
+        <Button variant="ghost" size="icon" className="tbtn" onClick={onOpenMath} title={t('math.insert')}>
           <Sigma className="h-3.5 w-3.5" />
         </Button>
 
@@ -773,7 +774,7 @@ export function EditorToolbar({
           size="icon"
           className={`tbtn ${tocOpen ? 'tbtn-on' : ''}`}
           onClick={onToggleToc}
-          title="İçindekiler Tablosu"
+          title={t('toolbar.toc')}
         >
           <BookOpen className="h-3.5 w-3.5" />
         </Button>
@@ -785,7 +786,7 @@ export function EditorToolbar({
           size="icon"
           className="tbtn"
           onClick={onOpenVoiceRecorder}
-          title="Ses Kaydı"
+          title={t('voice.clips')}
         >
           <Mic className="h-3.5 w-3.5" />
         </Button>
@@ -795,7 +796,7 @@ export function EditorToolbar({
           size="icon"
           className="tbtn"
           onClick={onOpenVersionHistory}
-          title="Sürüm Geçmişi"
+          title={t('version.title')}
         >
           <History className="h-3.5 w-3.5" />
         </Button>
@@ -805,7 +806,7 @@ export function EditorToolbar({
           size="icon"
           className={`tbtn ${note.encrypted ? 'text-amber-500' : ''}`}
           onClick={onOpenEncrypt}
-          title={note.encrypted ? 'Notu Kilidi Aç' : 'Notu Kilitle'}
+          title={note.encrypted ? t('encrypt.unlock.title') : t('encrypt.lock.title')}
         >
           {note.encrypted ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
         </Button>
@@ -830,7 +831,7 @@ export function EditorToolbar({
           className={`h-7 text-xs gap-1 px-2 ${isSummarizing ? 'opacity-70' : 'text-violet-600 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/40'}`}
           onClick={handleSummarize}
           disabled={isSummarizing || isFixing || isTranslating}
-          title="AI ile özetle"
+          title={t('toolbar.summarize')}
         >
           <FileText className={`h-3.5 w-3.5 ${isSummarizing ? 'animate-pulse' : ''}`} />
         </Button>

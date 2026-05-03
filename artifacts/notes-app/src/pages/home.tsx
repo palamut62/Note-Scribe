@@ -36,11 +36,6 @@ const VIEW_ICONS: Record<AppView, React.ElementType> = {
   calendar: Calendar,
 };
 
-const VIEW_LABELS: Record<AppView, string> = {
-  editor: 'Editör',
-  kanban: 'Kanban',
-  calendar: 'Takvim',
-};
 
 export function Home() {
   const { notes, activeNoteId, createNote, updateNote, settings, updateSettings, currentView, setCurrentView, importNotes, activeFolderId } = useApp();
@@ -92,7 +87,7 @@ export function Home() {
   useEffect(() => {
     const shared = parseShareUrl();
     if (shared) {
-      const confirmed = window.confirm(`"${shared.title || 'Paylaşılan Not'}" notunu içe aktarmak istiyor musunuz?`);
+      const confirmed = window.confirm(t('share.import.confirm', { title: shared.title || t('share.note.title') }));
       if (confirmed) {
         createNote({ title: shared.title, content: shared.content, tags: shared.tags });
       }
@@ -152,10 +147,10 @@ export function Home() {
     const text = await file.text();
     const imported = importNotesFromJson(text);
     if (!imported) {
-      alert('Geçersiz dosya. Lütfen nootle yedek dosyası (.json) seçin.');
+      alert(t('import.invalid'));
       return;
     }
-    const confirmed = window.confirm(`${imported.length} not içe aktarılacak. Devam etmek istiyor musunuz?`);
+    const confirmed = window.confirm(t('import.confirm', { n: String(imported.length) }));
     if (confirmed) {
       importNotes(imported);
     }
@@ -206,7 +201,7 @@ export function Home() {
             <button
               onClick={toggleSidebar}
               className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-              title={sidebarOpen ? 'Paneli Gizle (Ctrl+B)' : 'Paneli Göster (Ctrl+B)'}
+              title={sidebarOpen ? t('menu.sidebar.hide') : t('menu.sidebar.show')}
             >
               {sidebarOpen
                 ? <PanelLeftClose className="h-3.5 w-3.5" />
@@ -232,7 +227,7 @@ export function Home() {
                       ? 'bg-background shadow-sm text-foreground'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
-                  title={VIEW_LABELS[view]}
+                  title={view === 'editor' ? t('view.editor') : view === 'kanban' ? t('view.kanban') : t('view.calendar')}
                 >
                   <Icon className="h-3.5 w-3.5" />
                 </button>
@@ -285,7 +280,7 @@ export function Home() {
                         {def.ext && <span className="text-[10px] text-muted-foreground shrink-0">{def.ext}</span>}
                         <button
                           className={`ml-1 p-1 rounded transition-colors shrink-0 ${pinned ? 'text-primary hover:text-primary/70' : 'text-muted-foreground/40 hover:text-muted-foreground'}`}
-                          title={pinned ? 'Toolbardan kaldır' : 'Toolbara ekle'}
+                          title={pinned ? t('menu.pin.remove') : t('menu.pin.add')}
                           onPointerDown={e => { e.preventDefault(); e.stopPropagation(); }}
                           onClick={e => { e.preventDefault(); e.stopPropagation(); togglePin(id as PinnableActionId); }}
                         >
@@ -298,16 +293,16 @@ export function Home() {
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-normal pb-1">
-                Yedek
+                {t('menu.backup')}
               </DropdownMenuLabel>
               <DropdownMenuItem onSelect={handleExportJson} className="flex items-center gap-2">
                 <DatabaseBackup className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="flex-1">Tüm Notları Dışa Aktar</span>
+                <span className="flex-1">{t('menu.export.all')}</span>
                 <span className="text-[10px] text-muted-foreground">.json</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => jsonImportRef.current?.click()} className="flex items-center gap-2">
                 <Upload className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="flex-1">Notları İçe Aktar</span>
+                <span className="flex-1">{t('menu.import.notes')}</span>
                 <span className="text-[10px] text-muted-foreground">.json</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
