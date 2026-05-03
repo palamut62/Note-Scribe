@@ -523,23 +523,23 @@
 }
 
 .editor-page {
-  width: 794px;
-  min-height: 1123px;
+  width: var(--page-w, 794px);
+  min-height: var(--page-h, 1123px);
   flex-shrink: 0;
   margin: 0 auto;
   background: hsl(var(--card));
-  /* Visual page separators every 1123px (A4 height at 96dpi) */
+  /* Visual page separators — driven by --page-h CSS variable set inline */
   background-image: repeating-linear-gradient(
     to bottom,
     transparent 0,
-    transparent calc(1123px - 1px),
-    hsl(var(--border)) calc(1123px - 1px),
-    hsl(var(--border)) 1123px,
-    hsl(var(--muted) / 0.85) 1123px,
-    hsl(var(--muted) / 0.85) calc(1123px + 20px),
-    hsl(var(--border)) calc(1123px + 20px),
-    hsl(var(--border)) calc(1123px + 21px),
-    transparent calc(1123px + 21px)
+    transparent calc(var(--page-h, 1123px) - 1px),
+    hsl(var(--border)) calc(var(--page-h, 1123px) - 1px),
+    hsl(var(--border)) var(--page-h, 1123px),
+    hsl(var(--muted) / 0.85) var(--page-h, 1123px),
+    hsl(var(--muted) / 0.85) calc(var(--page-h, 1123px) + 20px),
+    hsl(var(--border)) calc(var(--page-h, 1123px) + 20px),
+    hsl(var(--border)) calc(var(--page-h, 1123px) + 21px),
+    transparent calc(var(--page-h, 1123px) + 21px)
   );
   box-shadow: 0 2px 12px 0 hsl(0 0% 0% / 0.12), 0 0 0 1px hsl(var(--border));
   position: relative;

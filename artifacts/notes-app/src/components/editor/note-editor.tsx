@@ -12,7 +12,7 @@ import { FontSize } from '@tiptap/extension-font-size';
 import { Table, TableRow, TableCell, TableHeader } from '@tiptap/extension-table';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 import { common, createLowlight } from 'lowlight';
-import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool } from '@/lib/types';
+import { Note, TextBox, FloatingImage, HeaderFooter, HFZone, DrawTool, PageSize, PageOrientation } from '@/lib/types';
 import { useApp } from '@/lib/app-state';
 import { useT } from '@/lib/use-t';
 import { EditorToolbar } from './toolbar';
@@ -45,8 +45,22 @@ interface Props {
   note: Note;
 }
 
-const PAGE_H = 1123;
-const SEP_H  = 21;
+const SEP_H = 21;
+
+const PAGE_DIMS: Record<PageSize, { w: number; h: number }> = {
+  a4:     { w: 794,  h: 1123 },
+  a5:     { w: 559,  h: 794  },
+  letter: { w: 816,  h: 1056 },
+  legal:  { w: 816,  h: 1344 },
+  a3:     { w: 1123, h: 1587 },
+};
+
+function resolvePageDims(size?: PageSize, orientation?: PageOrientation) {
+  const base = PAGE_DIMS[size ?? 'a4'];
+  return orientation === 'landscape'
+    ? { w: base.h, h: base.w }
+    : base;
+}
 
 function resolveHFTokens(text: string, title: string, page: number): string {
   const today = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -60,14 +74,14 @@ function normalizeHFZone(z: unknown): HFZone {
 }
 
 function HFPageOverlay({
-  data, noteTitle, pageNumber, marginLeft, marginRight, height, type, pageTop,
+  data, noteTitle, pageNumber, marginLeft, marginRight, height, type, pageTop, pageH,
 }: {
   data: HeaderFooter; noteTitle: string; pageNumber: number;
   marginLeft: number; marginRight: number; height: number;
-  type: 'header' | 'footer'; pageTop: number;
+  type: 'header' | 'footer'; pageTop: number; pageH: number;
 }) {
   if (!data.visible) return null;
-  const topPos = type === 'header' ? pageTop : pageTop + PAGE_H - height;
+  const topPos = type === 'header' ? pageTop : pageTop + pageH - height;
   const zones = (['left', 'center', 'right'] as const).map(pos => {
     const zone = normalizeHFZone(data[pos]);
     const imgH = zone.imageHeight ?? 24;
@@ -104,7 +118,7 @@ function HFPageOverlay({
 
 function PageOverlays({
   pageRef, header, footer, noteTitle,
-  marginLeft, marginRight, marginTop, marginBottom, showBorder, bgClass,
+  marginLeft, marginRight, marginTop, marginBottom, showBorder, bgClass, pageH,
 }: {
   pageRef: React.RefObject<HTMLDivElement | null>;
   header: HeaderFooter; footer: HeaderFooter;
@@ -112,8 +126,9 @@ function PageOverlays({
   marginLeft: number; marginRight: number; marginTop: number; marginBottom: number;
   showBorder: boolean;
   bgClass?: string;
+  pageH: number;
 }) {
-  const [totalH, setTotalH] = useState(PAGE_H);
+  const [totalH, setTotalH] = useState(pageH);
   useEffect(() => {
     const el = pageRef.current;
     if (!el) return;
@@ -122,7 +137,7 @@ function PageOverlays({
     return () => obs.disconnect();
   }, [pageRef]);
 
-  const count = Math.max(1, Math.ceil(totalH / (PAGE_H + SEP_H)));
+  const count = Math.max(1, Math.ceil(totalH / (pageH + SEP_H)));
   const nodes: React.ReactNode[] = [];
 
   const t = useT();
@@ -132,15 +147,15 @@ function PageOverlays({
     nodes.push(
       <div key="border-0" style={{
         position: 'absolute', top: marginTop, left: marginLeft, right: marginRight,
-        height: PAGE_H - marginTop - marginBottom,
+        height: pageH - marginTop - marginBottom,
         border: '1px solid var(--pattern-line)', pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
       }} />
     );
   }
 
   for (let i = 1; i < count; i++) {
-    const labelTop = PAGE_H * i + SEP_H * (i - 1);
-    const pageTop  = (PAGE_H + SEP_H) * i;
+    const labelTop = pageH * i + SEP_H * (i - 1);
+    const pageTop  = (pageH + SEP_H) * i;
     nodes.push(
       <div key={`sep-${i}`} className="page-sep-label" style={{ top: labelTop }}>
         <span className="page-sep-num">{t('page.num', { n: i + 1 })}</span>
@@ -151,7 +166,7 @@ function PageOverlays({
         key={`hdr-${i}`}
         data={header} noteTitle={noteTitle} pageNumber={i + 1}
         marginLeft={marginLeft} marginRight={marginRight}
-        height={marginTop} type="header" pageTop={pageTop}
+        height={marginTop} type="header" pageTop={pageTop} pageH={pageH}
       />
     );
     nodes.push(
@@ -159,7 +174,7 @@ function PageOverlays({
         key={`ftr-${i}`}
         data={footer} noteTitle={noteTitle} pageNumber={i + 1}
         marginLeft={marginLeft} marginRight={marginRight}
-        height={marginBottom} type="footer" pageTop={pageTop}
+        height={marginBottom} type="footer" pageTop={pageTop} pageH={pageH}
       />
     );
     if (bgClass) {
@@ -168,7 +183,7 @@ function PageOverlays({
           className={`page-pattern-overlay ${bgClass}`}
           style={{
             top: pageTop + marginTop,
-            height: PAGE_H - marginTop - marginBottom,
+            height: pageH - marginTop - marginBottom,
             left: marginLeft, right: marginRight,
           }}
         />
@@ -178,7 +193,7 @@ function PageOverlays({
       nodes.push(
         <div key={`border-${i}`} style={{
           position: 'absolute', top: pageTop + marginTop, left: marginLeft, right: marginRight,
-          height: PAGE_H - marginTop - marginBottom,
+          height: pageH - marginTop - marginBottom,
           border: '1px solid var(--pattern-line)', pointerEvents: 'none', zIndex: 1, boxSizing: 'border-box',
         }} />
       );
@@ -227,11 +242,15 @@ export function NoteEditor({ note }: Props) {
   const drawCanvasRef = useRef<DrawingCanvasHandle>(null);
   const settingsRef = useRef(settings);
   useEffect(() => { settingsRef.current = settings; }, [settings]);
+  const pageDims = resolvePageDims(settings.pageSize, settings.pageOrientation);
+  const pageH = pageDims.h;
+  const pageW = pageDims.w;
+
   const pageRef = useRef<HTMLDivElement | null>(null);
   const currentNoteIdRef = useRef<string | null>(null);
   const editorContentRef = useRef<HTMLDivElement>(null);
-  const [pageMinH, setPageMinH] = useState(PAGE_H);
-  const pageMinHRef = useRef(PAGE_H);
+  const [pageMinH, setPageMinH] = useState(pageH);
+  const pageMinHRef = useRef(pageH);
 
   const [showAiChat, setShowAiChat] = useState(false);
   const [showToc, setShowToc] = useState(false);
@@ -245,8 +264,8 @@ export function NoteEditor({ note }: Props) {
     if (!el) return;
     const obs = new ResizeObserver(() => {
       const h = el.offsetHeight;
-      const pages = Math.max(1, Math.ceil(h / PAGE_H));
-      const snapped = pages * PAGE_H + (pages - 1) * SEP_H;
+      const pages = Math.max(1, Math.ceil(h / pageH));
+      const snapped = pages * pageH + (pages - 1) * SEP_H;
       if (snapped !== pageMinHRef.current) {
         pageMinHRef.current = snapped;
         setPageMinH(snapped);
@@ -536,7 +555,15 @@ export function NoteEditor({ note }: Props) {
           style={{ flex: 1, overflow: 'auto' }}
           onClick={drawMode ? undefined : handlePageClick}
         >
-          <div className="editor-page" ref={pageRef} style={{ minHeight: pageMinH }}>
+          <div
+            className="editor-page"
+            ref={pageRef}
+            style={{
+              ['--page-w' as string]: `${pageW}px`,
+              ['--page-h' as string]: `${pageH}px`,
+              minHeight: pageMinH,
+            }}
+          >
             <DrawingCanvas
               ref={drawCanvasRef}
               ops={note.drawOps ?? []}
@@ -557,13 +584,14 @@ export function NoteEditor({ note }: Props) {
               marginBottom={settings.marginBottom ?? 120}
               showBorder={settings.backgroundPattern === 'grid'}
               bgClass={bgClass || undefined}
+              pageH={pageH}
             />
             {bgClass && (
               <div
                 className={`page-pattern-overlay ${bgClass}`}
                 style={{
                   top: settings.marginTop ?? 80,
-                  height: PAGE_H - (settings.marginTop ?? 80) - (settings.marginBottom ?? 120),
+                  height: pageH - (settings.marginTop ?? 80) - (settings.marginBottom ?? 120),
                   left: settings.marginLeft ?? 80,
                   right: settings.marginRight ?? 80,
                 }}
@@ -622,7 +650,7 @@ export function NoteEditor({ note }: Props) {
               marginLeft={settings.marginLeft ?? 80}
               marginRight={settings.marginRight ?? 80}
               height={settings.marginBottom ?? 120}
-              topOverride={PAGE_H - (settings.marginBottom ?? 120)}
+              topOverride={pageH - (settings.marginBottom ?? 120)}
               onChange={u => updateNote(note.id, { footer: { ...safeFooter, ...u } })}
             />
           </div>

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Settings as SettingsIcon, RefreshCw, CheckCircle2, AlertCircle, RotateCcw } from 'lucide-react';
 import { fetchModels, DEFAULT_AI_PROMPTS } from '@/lib/ai';
-import { AppTheme } from '@/lib/types';
+import { AppTheme, PageSize, PageOrientation } from '@/lib/types';
 
 const THEMES: { id: AppTheme; labelKey: string; bg: string; fg: string; page: string }[] = [
   { id: 'light',        labelKey: 'theme.light',    bg: '#f0ede8', fg: '#2c2a29', page: '#fdfcfb' },
@@ -323,6 +323,49 @@ export function SettingsDialog() {
             value="page"
             className="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 settings-scroll"
           >
+            {/* Page size & orientation */}
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.page.size')}</h3>
+              <div className="grid grid-cols-5 gap-1.5">
+                {(['a4','a5','letter','legal','a3'] as PageSize[]).map(sz => (
+                  <button
+                    key={sz}
+                    onClick={() => updateSettings({ pageSize: sz })}
+                    className={`py-1.5 text-xs rounded border transition-colors ${
+                      (settings.pageSize ?? 'a4') === sz
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    {sz === 'a4' ? 'A4' : sz === 'a5' ? 'A5' : sz === 'letter' ? 'Letter' : sz === 'legal' ? 'Legal' : 'A3'}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground">
+                {t(`settings.page.${settings.pageSize ?? 'a4'}` as Parameters<typeof t>[0])}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <h3 className="font-medium text-sm border-b pb-2">{t('settings.page.orientation')}</h3>
+              <div className="flex gap-2">
+                {(['portrait', 'landscape'] as PageOrientation[]).map(ori => (
+                  <button
+                    key={ori}
+                    onClick={() => updateSettings({ pageOrientation: ori })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 text-xs rounded border transition-colors ${
+                      (settings.pageOrientation ?? 'portrait') === ori
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:bg-accent'
+                    }`}
+                  >
+                    <span className={`inline-block border-2 border-current rounded-sm ${ori === 'portrait' ? 'w-4 h-5' : 'w-5 h-4'}`} />
+                    {t(`settings.page.${ori}` as Parameters<typeof t>[0])}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-3">
               <h3 className="font-medium text-sm border-b pb-2">{t('settings.margins')}</h3>
               <div className="flex gap-2">
