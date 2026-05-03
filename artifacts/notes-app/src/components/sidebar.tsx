@@ -67,12 +67,37 @@ export function Sidebar() {
     if (editingFolderId && editFolderRef.current) editFolderRef.current.focus();
   }, [editingFolderId]);
 
+  const folderIdStr = folders.map(f => f.id).join(',');
+  useEffect(() => {
+    if (folders.length === 0) return;
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      folders.forEach(f => next.add(f.id));
+      return next.size === prev.size ? prev : next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [folderIdStr]);
+
   const SORT_OPTIONS: { key: SortBy; label: string }[] = [
     { key: 'updatedAt', label: t('sort.updated') },
     { key: 'createdAt', label: t('sort.created') },
     { key: 'title', label: t('sort.title') },
     { key: 'wordCount', label: t('sort.words') },
   ];
+
+  const sortNotes = (arr: typeof notes) => {
+    const sorted = [...arr].sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'updatedAt') cmp = a.updatedAt.localeCompare(b.updatedAt);
+      else if (sortBy === 'createdAt') cmp = a.createdAt.localeCompare(b.createdAt);
+      else if (sortBy === 'title') cmp = a.title.localeCompare(b.title, 'tr');
+      else if (sortBy === 'wordCount') cmp = countWords(extractText(a.content)) - countWords(extractText(b.content));
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+    const pinned = sorted.filter(n => n.isPinned);
+    const unpinned = sorted.filter(n => !n.isPinned);
+    return [...pinned, ...unpinned];
+  };
 
   const filteredNotes = notes.filter(n => {
     if (activeFolderId === 'unfiled') {
@@ -328,7 +353,7 @@ export function Sidebar() {
 
           {/* Folders */}
           {folders.map(folder => {
-            const folderNotes = notes.filter(n => n.folderId === folder.id);
+            const folderNotes = sortNotes(notes.filter(n => n.folderId === folder.id));
             const isExpanded = expandedFolders.has(folder.id);
             const isActive = activeFolderId === folder.id;
             return (
@@ -397,19 +422,55 @@ export function Sidebar() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+
+                {/* Inline notes under expanded folder */}
+                {isExpanded && (
+                  <div className="ml-[22px] border-l border-border/40 pl-2 mt-0.5 pb-1 flex flex-col gap-0.5">
+                    {folderNotes.length === 0 ? (
+                      <div className="py-1 px-2 text-[10px] text-sidebar-foreground/30 italic">Boş klasör</div>
+                    ) : (
+                      folderNotes.map(note => (
+                        <div
+                          key={note.id}
+                          draggable={!selectMode}
+                          onDragStart={e => {
+                            e.dataTransfer.setData('noteId', note.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            setDraggingNoteId(note.id);
+                          }}
+                          onDragEnd={() => { setDraggingNoteId(null); setDragOverId(null); }}
+                          onClick={e => { e.stopPropagation(); setActiveNoteId(note.id); setActiveFolderId(folder.id); }}
+                          className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer text-xs transition-colors ${
+                            draggingNoteId === note.id
+                              ? 'opacity-40'
+                              : activeNoteId === note.id
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                              : 'hover:bg-sidebar-accent/50 text-sidebar-foreground/70 hover:text-sidebar-foreground'
+                          }`}
+                          style={note.color ? { borderLeft: `2px solid ${note.color}`, paddingLeft: '6px' } : undefined}
+                        >
+                          <span className="flex-1 truncate font-medium">{note.title || 'Başlıksız Not'}</span>
+                          {note.isPinned && <Pin className="h-2.5 w-2.5 text-primary opacity-60 shrink-0" />}
+                          {note.encrypted && <span className="text-[9px] text-amber-500 shrink-0">🔒</span>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
 
-          {folders.length > 0 && <div className="border-t border-border/50 my-2" />}
-
-          {/* Notes List */}
-          {displayNotes.length === 0 ? (
-            <div className="px-2 py-4 text-center text-xs text-sidebar-foreground/40">
-              {searchQuery ? t('search.no.results') : t('note.empty')}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-0.5">
+          {/* Flat notes list — only for "all notes" and "unfiled" views */}
+          {(!activeFolderId || activeFolderId === 'unfiled') && (
+            <>
+              {folders.length > 0 && !activeFolderId && <div className="border-t border-border/50 my-2" />}
+              {displayNotes.length === 0 ? (
+                <div className="px-2 py-4 text-center text-xs text-sidebar-foreground/40">
+                  {searchQuery ? t('search.no.results') : t('note.empty')}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-0.5">
               {displayNotes.map(note => (
                 <div
                   key={note.id}
@@ -547,6 +608,8 @@ export function Sidebar() {
               ))}
             </div>
           )}
+        </>
+        )}
         </div>
       </ScrollArea>
 
