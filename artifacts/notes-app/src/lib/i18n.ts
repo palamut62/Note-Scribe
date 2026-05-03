@@ -222,6 +222,7 @@ const DICT = {
     'note.bulk.delete.confirm': '{n} notu silmek istediğinizden emin misiniz?',
     'note.bulk.tag.prompt': 'Eklenecek etiketi girin:',
     // tag bar
+    'tag.empty.content': 'Not içeriği boş.',
     'tag.filter.click': 'Filtrelemek için tıkla',
     'tag.remove': 'Etiketi kaldır',
     'tag.suggestion.add': 'Eklemek için tıkla',
@@ -482,6 +483,7 @@ const DICT = {
     'note.bulk.delete.confirm': 'Are you sure you want to delete {n} notes?',
     'note.bulk.tag.prompt': 'Enter a tag to add:',
     // tag bar
+    'tag.empty.content': 'Note content is empty.',
     'tag.filter.click': 'Click to filter',
     'tag.remove': 'Remove tag',
     'tag.suggestion.add': 'Click to add',

@@ -73,7 +73,10 @@ export function TagBar({ noteId, tags, filterTag, onFilterTag, allTags }: TagBar
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
     const text = extractText(note.content);
-    if (!text.trim()) return;
+    if (!text.trim()) {
+      toast({ title: t('ai.error'), description: t('tag.empty.content'), variant: 'destructive' });
+      return;
+    }
 
     setIsSuggesting(true);
     try {
