@@ -186,8 +186,35 @@ export function PrintPreview({ note, settings, onClose }: Props) {
               paddingLeft:   mLeft,
               paddingRight:  mRight,
             }}
-            dangerouslySetInnerHTML={{ __html: note.content }}
-          />
+          >
+            {/* Wrap-floated textboxes must come FIRST so text flows around them */}
+            {note.textboxes.filter(tb => tb.wrapText).map(tb => {
+              const floatDir = tb.float ?? 'left';
+              return (
+                <div
+                  key={tb.id}
+                  style={{
+                    float: floatDir,
+                    width: tb.width,
+                    height: tb.height,
+                    marginTop: Math.max(0, tb.y - mTop),
+                    marginLeft: floatDir === 'right' ? 14 : 0,
+                    marginRight: floatDir === 'left' ? 14 : 0,
+                    marginBottom: 10,
+                    border: tb.borderStyle !== 'none' ? `2px ${tb.borderStyle ?? 'solid'} ${tb.borderColor ?? '#ccc'}` : undefined,
+                    backgroundColor: tb.backgroundColor ?? '#fffde7',
+                    color: tb.textColor ?? '#222',
+                    fontSize: tb.fontSize ?? 14,
+                    padding: 8,
+                    boxSizing: 'border-box',
+                    overflow: 'hidden',
+                  }}
+                  dangerouslySetInnerHTML={{ __html: tb.content }}
+                />
+              );
+            })}
+            <div dangerouslySetInnerHTML={{ __html: note.content }} />
+          </div>
 
           {/* Footer */}
           {safeFooter.visible && (
@@ -206,15 +233,15 @@ export function PrintPreview({ note, settings, onClose }: Props) {
             </div>
           )}
 
-          {/* Floating textboxes */}
-          {note.textboxes.map(tb => (
+          {/* Absolute textboxes (non-wrap only) */}
+          {note.textboxes.filter(tb => !tb.wrapText).map(tb => (
             <div
               key={tb.id}
               style={{
                 position: 'absolute',
                 left: tb.x, top: tb.y,
                 width: tb.width, height: tb.height,
-                border: `1px ${tb.borderStyle ?? 'solid'} ${tb.borderColor ?? '#ccc'}`,
+                border: tb.borderStyle !== 'none' ? `2px ${tb.borderStyle ?? 'solid'} ${tb.borderColor ?? '#ccc'}` : undefined,
                 backgroundColor: tb.backgroundColor ?? '#fffde7',
                 color: tb.textColor ?? '#222',
                 fontSize: tb.fontSize ?? 14,
